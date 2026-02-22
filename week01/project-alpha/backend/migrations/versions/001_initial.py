@@ -37,8 +37,8 @@ def upgrade() -> None:
         'ticket_labels',
         sa.Column('ticket_id', sa.Integer(), nullable=False),
         sa.Column('label_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint('label_id', ['labels.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint('ticket_id', ['tickets.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['ticket_id'], ['tickets.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['label_id'], ['labels.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('ticket_id', 'label_id')
     )
 

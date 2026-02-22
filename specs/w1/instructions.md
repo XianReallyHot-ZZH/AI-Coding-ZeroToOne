@@ -18,4 +18,20 @@
 ## phased implementation
 
 按照 ./specs/w1/0002_implementation-plan_by_GLM5.md 中的实现计划，分阶段实现项目，现在完整实现这个项目的 phase 1 代码。
+开发 Phase 2 的全部功能
+开发 Phase 3 的全部功能
+
+
+按照 ./specs/w1/0002_implementation-plan_by_GLM4_7.md 中的实现计划，分阶段实现项目，现在完整实现这个项目的 phase 1 代码。项目代码根目录为 ./week01/project-alpha-by-GLM47。
+开发 Phase 2 的全部功能。我们之间交流请用中文。
+
+
+## seed sql
+
+添加一个 seed.sql 文件，用来初始化数据库。里面放50个 meaningful 的 ticket 和十几个tags（包含platform tag, 如 ios, project tag 如 viking，功能性 tag 如 autocomplete， 等等）。要求 seed 文件正确可以通过 psql执行。
+
+
+## 优化 UI
+
+按照 apple website 的设计风格，think ultra hard，优化项目的 UI 和 UX。
 

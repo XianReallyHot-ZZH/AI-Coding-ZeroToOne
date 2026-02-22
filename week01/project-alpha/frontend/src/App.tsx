@@ -1,21 +1,23 @@
-import { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HomePage } from '@/pages/HomePage';
+import { TicketCreatePage } from '@/pages/TicketCreatePage';
+import { TicketEditPage } from '@/pages/TicketEditPage';
+import { ToastProvider } from '@/components/Toast';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-8">
-        <h1 className="text-4xl font-bold text-foreground mb-4">Ticket Manager</h1>
-        <p className="text-muted-foreground mb-8">Project Alpha - Phase 1 Setup Complete</p>
-        <div className="card p-6">
-          <button onClick={() => setCount((count) => count + 1)}>
-            Count is {count}
-          </button>
+    <ToastProvider>
+      <Router>
+        <div className="min-h-screen bg-background">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/tickets/new" element={<TicketCreatePage />} />
+            <Route path="/tickets/:id/edit" element={<TicketEditPage />} />
+          </Routes>
         </div>
-      </div>
-    </div>
-  )
+      </Router>
+    </ToastProvider>
+  );
 }
 
-export default App
+export default App;
