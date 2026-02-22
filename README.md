@@ -6,7 +6,7 @@ AI辅助编程-走向全能独立开发者
 ### AI 工具学习
 - **NotebookLM**：资料搜索、智能对话、Studio 工作台使用
 - **Cursor**：AI 辅助编程工具
-- **Claude Code**：AI 代码助手实践
+- **Trae**：AI 辅助编程工具
 
 ### 项目实战：Project Alpha - Ticket 标签管理系统
 
@@ -30,27 +30,16 @@ AI辅助编程-走向全能独立开发者
 - 前后端分离架构
 - 响应式 UI 设计
 
-**项目结构**：
-```
-week01/
-├── NotebookLM-practice/      # NotebookLM 练习
-└── project-alpha/           # 主要实现
-    ├── backend/             # FastAPI 后端
-    │   ├── app/             # 模型、路由、服务层
-    │   ├── migrations/      # 数据库迁移
-    │   └── tests/           # 测试
-    └── frontend/            # React 前端
-        └── src/
-            ├── components/  # UI 组件
-            ├── pages/       # 页面
-            └── services/    # API 服务
-```
 
 **文档与规格**：
 - 详细的 ER 图与数据库设计
 - 完整的 API 接口文档
 - 前端组件设计规范
 - 分阶段实施计划
+
+**项目效果截图**:
+![alt text](week01/project-alpha/d68c3bb0-caf9-4978-9d00-986decdfa21d.png)
+
 
 
 ## week02
