@@ -1,6 +1,12 @@
 ---
-description: MotherDuck-inspired front-end style guardrails
-globs: ["site/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}", "src/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}"]
+description: MotherDuck 暗色主题设计规范 - 高对比度配色、技术感排版、终端风格组件
+globs:
+  - "**/*.css"
+  - "**/*.scss"
+  - "**/*.less"
+  - "**/*.vue"
+  - "**/*.tsx"
+  - "**/*.jsx"
 alwaysApply: false
 ---
 

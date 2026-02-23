@@ -40,11 +40,11 @@ export const TicketCreatePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900">
+    <div className="min-h-screen bg-md-off-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-2xl">
         <Button 
           variant="ghost" 
-          className="mb-6 -ml-3 text-muted-foreground hover:text-foreground" 
+          className="mb-6 -ml-3 text-md-gray-600 hover:text-md-blue" 
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -52,16 +52,17 @@ export const TicketCreatePage: React.FC = () => {
         </Button>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">New Ticket</h1>
-          <p className="text-muted-foreground">
+          <p className="eyebrow mb-3">New Ticket</p>
+          <h1 className="text-3xl font-bold tracking-tight text-md-gray-900 mb-2">Create a Ticket</h1>
+          <p className="text-md-gray-600 leading-relaxed">
             Create a new ticket to track your work
           </p>
         </div>
 
         <Card className="overflow-hidden">
-          <CardHeader className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200/50 dark:border-neutral-800">
-            <CardTitle className="text-lg">Details</CardTitle>
-            <CardDescription>
+          <CardHeader className="bg-md-gray-100 border-b-2 border-md-gray-200">
+            <CardTitle className="text-lg text-md-gray-900">Details</CardTitle>
+            <CardDescription className="text-md-gray-600">
               Fill in the ticket information below
             </CardDescription>
           </CardHeader>

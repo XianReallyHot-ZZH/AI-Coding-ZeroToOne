@@ -20,15 +20,15 @@ export const LabelBadge: React.FC<LabelBadgeProps> = ({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+        'inline-flex items-center gap-1.5 px-3 py-1 rounded-pill text-xs font-semibold',
         'transition-all duration-200',
         onClick && 'cursor-pointer hover:scale-105 active:scale-95',
         className
       )}
       style={{ 
-        backgroundColor: label.color + '15',
+        backgroundColor: label.color + '18',
         color: label.color,
-        border: `1px solid ${label.color}30`
+        border: `1px solid ${label.color}25`
       }}
       onClick={onClick}
     >

@@ -1,6 +1,12 @@
 ---
-description: MotherDuck-inspired front-end style guardrails
-globs: ["site/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}", "src/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}"]
+description: MotherDock Neo-Brutalist 设计规范 - 暖色背景、硬边阴影、复古技术风格
+globs:
+  - "**/*.css"
+  - "**/*.scss"
+  - "**/*.less"
+  - "**/*.vue"
+  - "**/*.tsx"
+  - "**/*.jsx"
 alwaysApply: false
 ---
 

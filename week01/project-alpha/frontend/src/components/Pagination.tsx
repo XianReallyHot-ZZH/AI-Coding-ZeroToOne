@@ -34,10 +34,10 @@ export const Pagination: React.FC<PaginationProps> = ({
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
         className={cn(
-          'w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200',
+          'w-10 h-10 flex items-center justify-center rounded-md transition-all duration-200',
           page <= 1
-            ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed'
-            : 'text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95'
+            ? 'text-md-gray-400 cursor-not-allowed'
+            : 'text-md-blue hover:bg-md-blue-light active:scale-95'
         )}
       >
         <ChevronLeft className="h-4 w-4" />
@@ -48,16 +48,16 @@ export const Pagination: React.FC<PaginationProps> = ({
           <button
             onClick={() => onPageChange(1)}
             className={cn(
-              'w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200',
+              'w-10 h-10 flex items-center justify-center rounded-md text-sm font-semibold transition-all duration-200',
               page === 1
-                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-                : 'text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                ? 'bg-md-yellow text-md-blue border-2 border-md-blue shadow-md-card'
+                : 'text-md-blue hover:bg-md-blue-light'
             )}
           >
             1
           </button>
           {startPage > 2 && (
-            <span className="px-1 text-muted-foreground">...</span>
+            <span className="px-1 text-md-gray-400">...</span>
           )}
         </>
       )}
@@ -67,10 +67,10 @@ export const Pagination: React.FC<PaginationProps> = ({
           key={p}
           onClick={() => onPageChange(p)}
           className={cn(
-            'w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200',
+            'w-10 h-10 flex items-center justify-center rounded-md text-sm font-semibold transition-all duration-200',
             page === p
-              ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-              : 'text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'
+              ? 'bg-md-yellow text-md-blue border-2 border-md-blue shadow-md-card'
+              : 'text-md-blue hover:bg-md-blue-light'
           )}
         >
           {p}
@@ -80,15 +80,15 @@ export const Pagination: React.FC<PaginationProps> = ({
       {endPage < totalPages && (
         <>
           {endPage < totalPages - 1 && (
-            <span className="px-1 text-muted-foreground">...</span>
+            <span className="px-1 text-md-gray-400">...</span>
           )}
           <button
             onClick={() => onPageChange(totalPages)}
             className={cn(
-              'w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200',
+              'w-10 h-10 flex items-center justify-center rounded-md text-sm font-semibold transition-all duration-200',
               page === totalPages
-                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900'
-                : 'text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                ? 'bg-md-yellow text-md-blue border-2 border-md-blue shadow-md-card'
+                : 'text-md-blue hover:bg-md-blue-light'
             )}
           >
             {totalPages}
@@ -100,10 +100,10 @@ export const Pagination: React.FC<PaginationProps> = ({
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
         className={cn(
-          'w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200',
+          'w-10 h-10 flex items-center justify-center rounded-md transition-all duration-200',
           page >= totalPages
-            ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed'
-            : 'text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95'
+            ? 'text-md-gray-400 cursor-not-allowed'
+            : 'text-md-blue hover:bg-md-blue-light active:scale-95'
         )}
       >
         <ChevronRight className="h-4 w-4" />

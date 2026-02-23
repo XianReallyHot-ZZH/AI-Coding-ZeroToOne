@@ -29,33 +29,33 @@ export const useToast = () => {
 const ToastIcon: React.FC<{ type: ToastType }> = ({ type }) => {
   switch (type) {
     case 'success':
-      return <CheckCircle className="h-5 w-5 text-green-500" />;
+      return <CheckCircle className="h-5 w-5 text-md-teal" />;
     case 'error':
       return <AlertCircle className="h-5 w-5 text-red-500" />;
     default:
-      return <Info className="h-5 w-5 text-blue-500" />;
+      return <Info className="h-5 w-5 text-md-blue" />;
   }
 };
 
 const ToastItem: React.FC<{ toast: Toast; onClose: () => void }> = ({ toast, onClose }) => {
   const bgColors = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    info: 'bg-blue-50 border-blue-200',
+    success: 'bg-teal-50 border-md-teal',
+    error: 'bg-red-50 border-red-400',
+    info: 'bg-md-blue-light border-md-blue',
   };
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 p-4 rounded-lg border shadow-lg animate-in slide-in-from-right-full',
+        'flex items-center gap-3 p-4 rounded-lg border-2 shadow-md-card animate-in slide-in-from-right-full',
         bgColors[toast.type]
       )}
     >
       <ToastIcon type={toast.type} />
-      <p className="flex-1 text-sm font-medium text-gray-900">{toast.message}</p>
+      <p className="flex-1 text-sm font-medium text-md-gray-900">{toast.message}</p>
       <button
         onClick={onClose}
-        className="text-gray-400 hover:text-gray-600 transition-colors"
+        className="text-md-gray-400 hover:text-md-gray-600 transition-colors"
       >
         <X className="h-4 w-4" />
       </button>

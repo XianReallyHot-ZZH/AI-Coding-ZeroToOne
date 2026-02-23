@@ -19,16 +19,16 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   onChange,
 }) => {
   return (
-    <div className="flex p-1 bg-neutral-100 dark:bg-neutral-800/50 rounded-xl">
+    <div className="flex p-1 bg-md-gray-100 rounded-lg border-2 border-md-gray-200">
       {statuses.map((status) => (
         <button
           key={status.label}
           onClick={() => onChange(status.value)}
           className={cn(
-            'px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+            'px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200',
             value === status.value
-              ? 'bg-white dark:bg-neutral-700 text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'bg-white text-md-blue border-2 border-md-blue shadow-md-card'
+              : 'text-md-gray-600 hover:text-md-gray-900'
           )}
         >
           {status.label}

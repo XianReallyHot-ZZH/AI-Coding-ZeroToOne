@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { TicketForm } from '@/components/TicketForm';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Plus, RefreshCw, Sparkles, Moon, Sun } from 'lucide-react';
+import { Plus, RefreshCw, Moon, Sun } from 'lucide-react';
 import { Ticket } from '@/types/ticket';
 import { useToast } from '@/components/Toast';
 import { ApiError } from '@/services/api';
@@ -220,15 +220,15 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white dark:from-neutral-950 dark:to-neutral-900">
-      <header className="sticky top-0 z-40 glass border-b border-neutral-200/50 dark:border-neutral-800">
+    <div className="min-h-screen bg-md-off-white">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b-2 border-md-gray-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-md-yellow border-2 border-md-blue flex items-center justify-center shadow-md-card">
+                <span className="text-md-blue font-bold text-lg">T</span>
               </div>
-              <span className="text-lg font-semibold tracking-tight">Tickets</span>
+              <span className="text-xl font-semibold tracking-tight text-md-gray-900">Tickets</span>
             </div>
             
             <div className="flex items-center gap-2">
@@ -247,21 +247,22 @@ export const HomePage: React.FC = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <section className="mb-12">
+          <p className="eyebrow mb-3">Ticket Management</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-md-gray-900 mb-4">
             Manage your work
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl">
+          <p className="text-lg text-md-gray-600 max-w-2xl leading-relaxed">
             Track tasks, bugs, and feature requests with a clean, intuitive interface.
           </p>
         </section>
 
         <Card className="mb-8 overflow-hidden">
-          <CardHeader className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-200/50 dark:border-neutral-800">
-            <CardTitle className="text-base font-medium">Filters</CardTitle>
+          <CardHeader className="bg-md-gray-100 border-b-2 border-md-gray-200">
+            <CardTitle className="text-base font-semibold text-md-gray-900">Filters</CardTitle>
           </CardHeader>
-          <CardContent className="p-5 space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <SearchBar

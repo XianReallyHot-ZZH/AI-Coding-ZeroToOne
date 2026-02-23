@@ -1,6 +1,12 @@
 ---
-description: MotherDuck-inspired front-end style guardrails
-globs: ["site/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}", "src/**/*.{ts,tsx,astro,mdx,css,scss,sass,less}"]
+description: MotherDuck 设计系统规范 - 包含配色、排版、间距、阴影、组件等 UI 设计标准
+globs:
+  - "**/*.css"
+  - "**/*.scss"
+  - "**/*.less"
+  - "**/*.vue"
+  - "**/*.tsx"
+  - "**/*.jsx"
 alwaysApply: false
 ---
 

@@ -22,21 +22,24 @@ interface TicketCardProps {
   onLabelClick?: (labelId: number) => void;
 }
 
-const statusStyles: Record<TicketStatus, { bg: string; text: string; dot: string }> = {
+const statusStyles: Record<TicketStatus, { bg: string; text: string; dot: string; border: string }> = {
   [TicketStatus.OPEN]: {
-    bg: 'bg-blue-50 dark:bg-blue-500/10',
-    text: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500',
+    bg: 'bg-md-blue-light',
+    text: 'text-md-blue',
+    dot: 'bg-md-blue',
+    border: 'border border-md-blue/15',
   },
   [TicketStatus.COMPLETED]: {
-    bg: 'bg-green-50 dark:bg-green-500/10',
-    text: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500',
+    bg: 'bg-teal-50',
+    text: 'text-md-teal',
+    dot: 'bg-md-teal',
+    border: 'border border-teal-200/50',
   },
   [TicketStatus.CANCELLED]: {
-    bg: 'bg-neutral-100 dark:bg-neutral-800',
-    text: 'text-neutral-600 dark:text-neutral-400',
-    dot: 'bg-neutral-400',
+    bg: 'bg-md-gray-100',
+    text: 'text-md-gray-400',
+    dot: 'bg-md-gray-400',
+    border: 'border border-md-gray-200/50',
   },
 };
 
@@ -85,11 +88,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               {ticket.title}
             </CardTitle>
             <div className="flex items-center gap-2">
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill text-xs font-semibold ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                 {STATUS_LABELS[ticket.status as TicketStatus]}
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-md-gray-400">
                 {formatDate(ticket.created_at)}
               </span>
             </div>
@@ -112,11 +115,11 @@ export const TicketCard: React.FC<TicketCardProps> = ({
               {ticket.status === TicketStatus.OPEN && (
                 <>
                   <DropdownMenuItem onClick={handleAction(() => onComplete(ticket.id))}>
-                    <Check className="mr-2 h-4 w-4 text-green-500" />
+                    <Check className="mr-2 h-4 w-4 text-md-teal" />
                     Complete
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAction(() => onCancel(ticket.id))}>
-                    <X className="mr-2 h-4 w-4 text-neutral-500" />
+                    <X className="mr-2 h-4 w-4 text-md-gray-400" />
                     Cancel
                   </DropdownMenuItem>
                 </>
@@ -147,7 +150,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({
       </CardHeader>
       <CardContent className="pt-0">
         {ticket.description && (
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
+          <p className="text-sm text-md-gray-600 mb-4 line-clamp-2 leading-relaxed">
             {ticket.description}
           </p>
         )}
