@@ -28,3 +28,6 @@ test.db
 
 .vscode
 .vite
+
+# Cursor
+.cursor/
