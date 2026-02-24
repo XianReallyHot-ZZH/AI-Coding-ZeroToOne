@@ -11,7 +11,7 @@
 
 **Language/Version**: Python 3.11+ (Backend), TypeScript 5.x (Frontend)
 **Primary Dependencies**: FastAPI, sqlglot, OpenAI SDK, SQLAlchemy (Backend); React, Refine 5, Tailwind CSS, Ant Design, Monaco Editor (Frontend)
-**Storage**: SQLite (~/.db_query/db_query.db) for metadata cache; User databases via connection strings
+**Storage**: SQLite (D:/.db_query/db_query.db) for metadata cache; User databases via connection strings
 **Testing**: pytest (Backend), Vitest/Jest (Frontend)
 **Target Platform**: Web application (Browser)
 **Project Type**: web-service

@@ -172,7 +172,7 @@ npm run test
 
 ```bash
 # Delete SQLite metadata database
-rm ~/.db_query/db_query.db
+rm D:/.db_query/db_query.db
 
 # Restart backend to recreate
 ```

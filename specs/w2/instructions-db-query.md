@@ -1,5 +1,24 @@
 # Instructions
 
+## speckit 流程总结
+
+- constitution
+  - 输入: 项目原则 指导规范等 最顶层的纲领性的东西
+  - 输出: constitution.md
+- spec
+  - 输入: 描述你想构建的东西，讲清楚是什么和为什么，这时候不要关注技术细节
+  - 输出: spec.md，产出的其实就是产品功能与需求说明书
+- plan
+  - 输入: 讲清楚你的技术栈选型和架构选择
+  - 输出: plan.md、api.md、data-model.md、quick-start.md、research.md等，产出的其实就是整套可实施的技术与架构方案（偏顶层）
+- task
+  - 输入: 无需用户输入，自动会根据 前三步的文件产物 进行任务拆解
+  - 输出: task.md，产出的其实就拆解到各个阶段的任务与详细功能特性
+- implement
+  - 输入: 无需用户输入，自动会根据 前四步的文件产物 进行任务实施
+  - 输出: AI coding，大模型输出最终的代码
+  
+
 ## constitution-项目原则
 
 这是针对 ./week02/db_query 项目的:
@@ -27,7 +46,7 @@
 后端使用 Python (uv) / FastAPI / sqlglot / openai sdk 来实现。
 前端使用 React / refine 5 / tailwind / ant design 来实现。sql editor 使用 monaco editor 来实现。
 
-OpenAI API key 在环境变量 OPENAI_API_KEY 中。数据库连接和 metadata 存储在 sqlite 数据库中，放在 ~/.db_query/db_query.db 中。
+OpenAI API key 在环境变量 OPENAI_API_KEY 中。数据库连接和 metadata 存储在 sqlite 数据库中，放在 D:/.db_query/db_query.db 中。
 
 后端 API 需要支持 cors，允许所有 origin。大致 API 如下：
 
@@ -59,4 +78,6 @@ POST /api/v1/dbs/{name}/query/natural
 }
 ```
 
+## implement-任务实现
 
+完成 phase x 的所有任务

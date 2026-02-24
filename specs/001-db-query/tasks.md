@@ -15,7 +15,7 @@
 
 ## Path Conventions
 
-- **Web app**: `backend/src/` for Python backend, `frontend/src/` for React frontend
+- **Web app**: `week02/db_query/backend/src/` for Python backend, `week02/db_query/frontend/src/` for React frontend
 
 ---
 
@@ -23,13 +23,13 @@
 
 **Purpose**: Project initialization and basic structure for both backend and frontend
 
-- [ ] T001 Create backend directory structure with `backend/src/__init__.py`
-- [ ] T002 Initialize Python project with uv in `backend/pyproject.toml` (FastAPI, sqlglot, openai, sqlalchemy, pydantic)
-- [ ] T003 [P] Create frontend directory structure with Vite + React + TypeScript
-- [ ] T004 [P] Initialize Refine 5 with Ant Design in `frontend/package.json`
-- [ ] T005 [P] Create environment configuration template in `backend/.env.example` (OPENAI_API_KEY)
-- [ ] T006 [P] Configure TypeScript strict mode in `frontend/tsconfig.json`
-- [ ] T007 [P] Configure Tailwind CSS in `frontend/tailwind.config.js`
+- [x] T001 Create backend directory structure with `backend/src/__init__.py`
+- [x] T002 Initialize Python project with uv in `backend/pyproject.toml` (FastAPI, sqlglot, openai, sqlalchemy, pydantic)
+- [x] T003 [P] Create frontend directory structure with Vite + React + TypeScript
+- [x] T004 [P] Initialize Refine 5 with Ant Design in `frontend/package.json`
+- [x] T005 [P] Create environment configuration template in `backend/.env.example` (OPENAI_API_KEY)
+- [x] T006 [P] Configure TypeScript strict mode in `frontend/tsconfig.json`
+- [x] T007 [P] Configure Tailwind CSS in `frontend/tailwind.config.js`
 
 ---
 
@@ -39,15 +39,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Create FastAPI app entry point in `backend/src/main.py` with CORS middleware
-- [ ] T009 Create configuration management in `backend/src/config.py` (environment variables, SQLite path)
-- [ ] T010 [P] Create SQLite database models in `backend/src/db/models.py` (DatabaseConnection, TableMetadata, ColumnMetadata)
-- [ ] T011 [P] Create SQLite repository layer in `backend/src/db/repository.py` (CRUD operations for connections and metadata)
-- [ ] T012 [P] Create base Pydantic model configuration in `backend/src/models/__init__.py` (camelCase alias generator)
-- [ ] T013 [P] Create API error response models in `backend/src/models/errors.py`
-- [ ] T014 [P] Create Refine data provider in `frontend/src/services/api.ts` (REST API client)
-- [ ] T015 Create App layout with Refine router in `frontend/src/App.tsx`
-- [ ] T016 [P] Create TypeScript type definitions in `frontend/src/types/database.ts`, `frontend/src/types/metadata.ts`, `frontend/src/types/query.ts`
+- [x] T008 Create FastAPI app entry point in `backend/src/main.py` with CORS middleware
+- [x] T009 Create configuration management in `backend/src/config.py` (environment variables, SQLite path)
+- [x] T010 [P] Create SQLite database models in `backend/src/db/models.py` (DatabaseConnection, TableMetadata, ColumnMetadata)
+- [x] T011 [P] Create SQLite repository layer in `backend/src/db/repository.py` (CRUD operations for connections and metadata)
+- [x] T012 [P] Create base Pydantic model configuration in `backend/src/models/__init__.py` (camelCase alias generator)
+- [x] T013 [P] Create API error response models in `backend/src/models/errors.py`
+- [x] T014 [P] Create Refine data provider in `frontend/src/services/api.ts` (REST API client)
+- [x] T015 Create App layout with Refine router in `frontend/src/App.tsx`
+- [x] T016 [P] Create TypeScript type definitions in `frontend/src/types/database.ts`, `frontend/src/types/metadata.ts`, `frontend/src/types/query.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -61,22 +61,22 @@
 
 ### Backend for User Story 1
 
-- [ ] T017 [P] [US1] Create DatabaseConnectionCreate request model in `backend/src/models/database.py`
-- [ ] T018 [P] [US1] Create DatabaseConnectionResponse model in `backend/src/models/database.py`
-- [ ] T019 [US1] Implement ConnectionService in `backend/src/services/connection.py` (validate connection string, test connection, create engine)
-- [ ] T020 [US1] Implement MetadataService.extract_metadata() in `backend/src/services/metadata.py` (use SQLAlchemy Inspector)
-- [ ] T021 [US1] Implement PUT /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (add connection + extract metadata)
-- [ ] T022 [US1] Implement GET /api/v1/dbs endpoint in `backend/src/api/databases.py` (list all connections)
-- [ ] T023 [US1] Implement GET /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (get connection details)
-- [ ] T024 [US1] Implement DELETE /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (remove connection)
+- [x] T017 [P] [US1] Create DatabaseConnectionCreate request model in `backend/src/models/database.py`
+- [x] T018 [P] [US1] Create DatabaseConnectionResponse model in `backend/src/models/database.py`
+- [x] T019 [US1] Implement ConnectionService in `backend/src/services/connection.py` (validate connection string, test connection, create engine)
+- [x] T020 [US1] Implement MetadataService.extract_metadata() in `backend/src/services/metadata.py` (use SQLAlchemy Inspector)
+- [x] T021 [US1] Implement PUT /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (add connection + extract metadata)
+- [x] T022 [US1] Implement GET /api/v1/dbs endpoint in `backend/src/api/databases.py` (list all connections)
+- [x] T023 [US1] Implement GET /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (get connection details)
+- [x] T024 [US1] Implement DELETE /api/v1/dbs/{name} endpoint in `backend/src/api/databases.py` (remove connection)
 
 ### Frontend for User Story 1
 
-- [ ] T025 [P] [US1] Create DatabaseList component in `frontend/src/components/DatabaseList.tsx`
-- [ ] T026 [P] [US1] Create DatabaseForm component in `frontend/src/components/DatabaseForm.tsx` (connection string input)
-- [ ] T027 [US1] Create DatabaseListPage in `frontend/src/pages/DatabaseListPage.tsx` (list + add database)
-- [ ] T028 [US1] Create databaseService in `frontend/src/services/databaseService.ts` (API calls)
-- [ ] T029 [US1] Add database resource route to `frontend/src/App.tsx`
+- [x] T025 [P] [US1] Create DatabaseList component in `frontend/src/components/DatabaseList.tsx`
+- [x] T026 [P] [US1] Create DatabaseForm component in `frontend/src/components/DatabaseForm.tsx` (connection string input)
+- [x] T027 [US1] Create DatabaseListPage in `frontend/src/pages/DatabaseListPage.tsx` (list + add database)
+- [x] T028 [US1] Create databaseService in `frontend/src/services/databaseService.ts` (API calls)
+- [x] T029 [US1] Add database resource route to `frontend/src/App.tsx`
 
 **Checkpoint**: User Story 1 complete - users can add, list, and delete database connections
 

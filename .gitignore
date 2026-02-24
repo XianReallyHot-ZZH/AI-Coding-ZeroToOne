@@ -31,3 +31,22 @@ test.db
 
 # Cursor
 .cursor/
+
+# Python build artifacts
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# TypeScript/JavaScript build
+dist/
+build/
+
+# IDE
+.idea/
+
+# Logs
+*.log
+
+# SQLite databases (except test)
+db_query.db
