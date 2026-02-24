@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Input, Button, Space, Alert, Typography, Card } from "antd";
-import { SendOutlined, LoadingOutlined } from "@ant-design/icons";
+import { Input, Button, Alert, Typography, message } from "antd";
+import { SendOutlined, LoadingOutlined, CopyOutlined, CheckOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -21,6 +21,7 @@ export function NlQueryInput({
   explanation,
 }: NlQueryInputProps) {
   const [question, setQuestion] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleGenerate = async () => {
     if (question.trim()) {
@@ -28,62 +29,95 @@ export function NlQueryInput({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && e.ctrlKey) {
-      handleGenerate();
+  const handleCopy = () => {
+    if (generatedSql) {
+      navigator.clipboard.writeText(generatedSql);
+      setCopied(true);
+      message.success("SQL copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
   return (
-    <Card title="Natural Language Query" className="mb-4">
-      <Space.Compact style={{ width: "100%" }} className="mb-2">
-        <TextArea
-          placeholder="Describe what you want to query in natural language (e.g., '查询所有活跃用户的邮箱')"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoSize={{ minRows: 2, maxRows: 4 }}
-          disabled={loading}
-        />
-      </Space.Compact>
-      <div className="flex justify-between items-center">
-        <Text type="secondary" className="text-xs">
-          Press Ctrl+Enter to generate
-        </Text>
-        <Button
-          type="primary"
-          icon={loading ? <LoadingOutlined /> : <SendOutlined />}
-          onClick={handleGenerate}
-          loading={loading}
-          disabled={!question.trim()}
-        >
-          Generate SQL
-        </Button>
+    <div className="py-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-[var(--md-blue)] text-lg">Natural Language Query</h3>
+        <span className="text-sm text-[var(--md-gray-400)]">
+          Powered by Deepseek
+        </span>
       </div>
 
-      {error && (
-        <Alert
-          message="Generation Error"
-          description={error}
-          type="error"
-          className="mt-4"
-          closable
-        />
-      )}
-
-      {generatedSql && !error && (
-        <div className="mt-4">
-          <Text strong>Generated SQL:</Text>
-          <pre className="bg-gray-50 p-3 rounded mt-2 text-sm overflow-x-auto">
-            {generatedSql}
-          </pre>
-          {explanation && (
-            <div className="mt-2">
-              <Text type="secondary">Explanation: {explanation}</Text>
-            </div>
-          )}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-[var(--md-gray-600)] mb-2">
+            Describe what you want to query
+          </label>
+          <TextArea
+            placeholder="e.g., 查询所有活跃用户的邮箱和注册时间"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            autoSize={{ minRows: 2, maxRows: 4 }}
+            disabled={loading}
+            className="text-base"
+          />
         </div>
-      )}
-    </Card>
+
+        <div className="flex items-center justify-between">
+          <Text type="secondary" className="text-xs">
+            Press Ctrl+Enter to generate
+          </Text>
+          <Button
+            type="primary"
+            icon={loading ? <LoadingOutlined /> : <SendOutlined />}
+            onClick={handleGenerate}
+            loading={loading}
+            disabled={!question.trim()}
+          >
+            Generate SQL
+          </Button>
+        </div>
+
+        {error && (
+          <Alert
+            message="Generation Error"
+            description={error}
+            type="error"
+            closable
+            showIcon
+          />
+        )}
+
+        {generatedSql && !error && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <Text strong className="text-[var(--md-blue)]">
+                Generated SQL:
+              </Text>
+              <Button
+                type="text"
+                size="small"
+                icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+                onClick={handleCopy}
+                className={copied ? "text-[var(--md-teal)]" : ""}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+            <div className="bg-[var(--md-blue)] rounded-[var(--radius-lg)] p-4 overflow-x-auto">
+              <pre className="mono text-sm text-[var(--md-yellow)] whitespace-pre-wrap">
+                {generatedSql}
+              </pre>
+            </div>
+            {explanation && (
+              <div className="mt-3 p-3 bg-[var(--md-blue-light)] rounded-[var(--radius-md)]">
+                <Text type="secondary" className="text-sm">
+                  <strong>Explanation:</strong> {explanation}
+                </Text>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

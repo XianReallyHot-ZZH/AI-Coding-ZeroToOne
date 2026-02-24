@@ -1,6 +1,8 @@
-import { Card, Button, Space, Alert } from "antd";
-import { PlayCircleOutlined, ClearOutlined } from "@ant-design/icons";
+import { Button, Space, Alert } from "antd";
+import { PlayCircleOutlined, ClearOutlined, LoadingOutlined } from "@ant-design/icons";
 import Editor from "@monaco-editor/react";
+import type { Monaco } from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
 
 interface SqlEditorProps {
   value: string;
@@ -10,6 +12,38 @@ interface SqlEditorProps {
   error?: string | null;
 }
 
+const motherduckTheme = {
+  base: "vs" as const,
+  inherit: true,
+  rules: [
+    { token: "comment", foreground: "9E9B8F", fontStyle: "italic" },
+    { token: "keyword", foreground: "1A2B6B", fontStyle: "bold" },
+    { token: "keyword.sql", foreground: "1A2B6B", fontStyle: "bold" },
+    { token: "string", foreground: "00BFA5" },
+    { token: "string.sql", foreground: "00BFA5" },
+    { token: "number", foreground: "F4820A" },
+    { token: "delimiter", foreground: "5C5A53" },
+    { token: "delimiter.parenthesis", foreground: "1A2B6B" },
+    { token: "identifier", foreground: "1C1B17" },
+    { token: "identifier.quote", foreground: "5C5A53" },
+    { token: "operator", foreground: "1A2B6B" },
+    { token: "predefined", foreground: "2C3E9A" },
+  ],
+  colors: {
+    "editor.background": "#FFFFFF",
+    "editor.foreground": "#1C1B17",
+    "editor.lineHighlightBackground": "#FFFBE6",
+    "editorLineNumber.foreground": "#9E9B8F",
+    "editorLineNumber.activeForeground": "#1A2B6B",
+    "editor.selectionBackground": "#FFE234",
+    "editor.inactiveSelectionBackground": "#FFFBE6",
+    "editorCursor.foreground": "#1A2B6B",
+    "editorWhitespace.foreground": "#E5E3DC",
+    "editorIndentGuide.background": "#E5E3DC",
+    "editorIndentGuide.activeBackground": "#9E9B8F",
+  },
+};
+
 export function SqlEditor({
   value,
   onChange,
@@ -17,14 +51,27 @@ export function SqlEditor({
   loading,
   error,
 }: SqlEditorProps) {
+  const monacoRef = useRef<Monaco | null>(null);
+
   const handleEditorChange = (val: string | undefined) => {
     onChange(val || "");
   };
 
+  const handleEditorWillMount = (monaco: Monaco) => {
+    monacoRef.current = monaco;
+    monaco.editor.defineTheme("motherduck", motherduckTheme);
+  };
+
+  useEffect(() => {
+    if (monacoRef.current) {
+      monacoRef.current.editor.setTheme("motherduck");
+    }
+  }, []);
+
   return (
-    <Card
-      title="SQL Query"
-      extra={
+    <div className="py-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-[var(--md-blue)] text-lg">SQL Query</h3>
         <Space>
           <Button
             icon={<ClearOutlined />}
@@ -35,15 +82,15 @@ export function SqlEditor({
           </Button>
           <Button
             type="primary"
-            icon={<PlayCircleOutlined />}
+            icon={loading ? <LoadingOutlined /> : <PlayCircleOutlined />}
             onClick={onExecute}
             loading={loading}
           >
             Execute
           </Button>
         </Space>
-      }
-    >
+      </div>
+
       {error && (
         <Alert
           message="Query Error"
@@ -51,24 +98,35 @@ export function SqlEditor({
           type="error"
           className="mb-4"
           closable
+          showIcon
         />
       )}
-      <Editor
-        height="200px"
-        defaultLanguage="sql"
-        value={value}
-        onChange={handleEditorChange}
-        theme="vs-light"
-        options={{
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: "on",
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          wordWrap: "on",
-          tabSize: 2,
-        }}
-      />
-    </Card>
+
+      <div className="border-2 border-[var(--md-gray-200)] rounded-[var(--radius-lg)] overflow-hidden hover:border-[var(--md-blue)] transition-colors">
+        <Editor
+          height="200px"
+          defaultLanguage="sql"
+          value={value}
+          onChange={handleEditorChange}
+          beforeMount={handleEditorWillMount}
+          theme="motherduck"
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            fontFamily: "'DM Mono', monospace",
+            lineNumbers: "on",
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            wordWrap: "on",
+            tabSize: 2,
+            padding: { top: 16, bottom: 16 },
+            renderLineHighlight: "all",
+            cursorBlinking: "smooth",
+            cursorSmoothCaretAnimation: "on",
+            bracketPairColorization: { enabled: true },
+          }}
+        />
+      </div>
+    </div>
   );
 }

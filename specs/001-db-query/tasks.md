@@ -162,12 +162,12 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T058 [P] Add connection URL masking in `backend/src/models/database.py` (hide credentials in response)
-- [ ] T059 [P] Add error handling and user-friendly error messages in `backend/src/api/` endpoints
-- [ ] T060 [P] Add loading states and error toasts to all frontend components
-- [ ] T061 [P] Add responsive layout adjustments in `frontend/src/App.tsx` (mobile-friendly)
-- [ ] T062 Validate quickstart.md scenarios work end-to-end
-- [ ] T063 [P] Add SQL syntax highlighting theme for Monaco editor in `frontend/src/components/SqlEditor.tsx`
+- [x] T058 [P] Add connection URL masking in `backend/src/models/database.py` (hide credentials in response)
+- [x] T059 [P] Add error handling and user-friendly error messages in `backend/src/api/` endpoints
+- [x] T060 [P] Add loading states and error toasts to all frontend components
+- [x] T061 [P] Add responsive layout adjustments in `frontend/src/App.tsx` (mobile-friendly)
+- [x] T062 Validate quickstart.md scenarios work end-to-end
+- [x] T063 [P] Add SQL syntax highlighting theme for Monaco editor in `frontend/src/components/SqlEditor.tsx`
 
 ---
 

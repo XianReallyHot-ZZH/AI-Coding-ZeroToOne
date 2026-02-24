@@ -1,12 +1,11 @@
-import { DatabaseOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, message, Space, Typography } from "antd";
 import { useState } from "react";
-import type { DatabaseConnectionCreate } from "@/types/database";
+import { Form, Input, Button, Typography, message } from "antd";
+import { DatabaseOutlined, PlusOutlined, LoadingOutlined } from "@ant-design/icons";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface DatabaseFormProps {
-  onSubmit: (data: DatabaseConnectionCreate & { name: string }) => Promise<void>;
+  onSubmit: (data: { name: string; connectionUrl: string }) => Promise<void>;
   loading?: boolean;
 }
 
@@ -14,14 +13,14 @@ export function DatabaseForm({ onSubmit, loading }: DatabaseFormProps) {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (values: DatabaseConnectionCreate & { name: string }) => {
+  const handleSubmit = async (values: { name: string; connectionUrl: string }) => {
     setSubmitting(true);
     try {
       await onSubmit(values);
       form.resetFields();
       message.success("Database connection added successfully!");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to add database";
+      const errorMessage = error instanceof Error ? error.message : "Failed to add database connection";
       message.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -29,57 +28,66 @@ export function DatabaseForm({ onSubmit, loading }: DatabaseFormProps) {
   };
 
   return (
-    <Card className="mb-6">
-      <Title level={5} className="mb-4">
-        <DatabaseOutlined className="mr-2" />
-        Add Database Connection
-      </Title>
+    <div className="md-card">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--md-yellow)] border-2 border-[var(--md-blue)] flex items-center justify-center shadow-[2px_2px_0_0_var(--md-blue)]">
+          <PlusOutlined className="text-[var(--md-blue)]" />
+        </div>
+        <div>
+          <h3 className="font-bold text-[var(--md-blue)] text-lg">Add Database Connection</h3>
+          <Text className="text-sm text-[var(--md-gray-600)]">Connect to a PostgreSQL database</Text>
+        </div>
+      </div>
+
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        disabled={loading || submitting}
+        requiredMark={false}
       >
-        <Form.Item
-          name="name"
-          label="Connection Name"
-          rules={[
-            { required: true, message: "Please enter a connection name" },
-            {
-              pattern: /^[a-z0-9_-]+$/,
-              message: "Only lowercase letters, numbers, underscore, and hyphen allowed",
-            },
-          ]}
-        >
-          <Input placeholder="my-postgres" />
-        </Form.Item>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Form.Item
+            name="name"
+            label={<span className="font-medium text-[var(--md-gray-600)]">Connection Name</span>}
+            rules={[{ required: true, message: "Please enter a name" }]}
+          >
+            <Input
+              placeholder="my-database"
+              prefix={<DatabaseOutlined className="text-[var(--md-gray-400)]" />}
+              disabled={submitting || loading}
+            />
+          </Form.Item>
 
-        <Form.Item
-          name="url"
-          label="Connection URL"
-          rules={[
-            { required: true, message: "Please enter a connection URL" },
-          ]}
-          extra={
-            <Text type="secondary" className="text-xs">
-              Example: postgresql://user:password@host:port/database
-            </Text>
-          }
-        >
-          <Input.Password
-            placeholder="postgresql://postgres:postgres@localhost:5432/mydb"
-          />
-        </Form.Item>
+          <Form.Item
+            name="connectionUrl"
+            label={<span className="font-medium text-[var(--md-gray-600)]">Connection URL</span>}
+            rules={[
+              { required: true, message: "Please enter a connection URL" },
+              {
+                pattern: /^postgresql:\/\//,
+                message: "Must be a valid PostgreSQL URL",
+              },
+            ]}
+          >
+            <Input.Password
+              placeholder="postgresql://user:pass@host:5432/db"
+              visibilityToggle={{ visible: false }}
+              disabled={submitting || loading}
+            />
+          </Form.Item>
+        </div>
 
-        <Form.Item className="mb-0">
-          <Space>
-            <Button type="primary" htmlType="submit" loading={submitting}>
-              Connect
-            </Button>
-            <Button onClick={() => form.resetFields()}>Clear</Button>
-          </Space>
-        </Form.Item>
+        <div className="flex justify-end">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={submitting || loading}
+            icon={submitting || loading ? <LoadingOutlined /> : <PlusOutlined />}
+          >
+            Add Connection
+          </Button>
+        </div>
       </Form>
-    </Card>
+    </div>
   );
 }
