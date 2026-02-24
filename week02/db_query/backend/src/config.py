@@ -5,7 +5,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    openai_api_key: str = ""
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com"
     database_sqlite_path: str = "~/.db_query/db_query.db"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 

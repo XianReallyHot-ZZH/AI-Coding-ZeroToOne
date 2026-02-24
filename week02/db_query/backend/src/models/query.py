@@ -17,3 +17,12 @@ class QueryResultResponse(BaseResponseModel):
     rows: list[dict[str, Any]]
     row_count: int
     truncated: bool
+
+
+class NaturalLanguageRequest(BaseResponseModel):
+    question: str
+
+
+class GeneratedQueryResponse(BaseResponseModel):
+    sql: str
+    explanation: str

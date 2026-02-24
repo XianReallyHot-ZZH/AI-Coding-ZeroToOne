@@ -81,3 +81,8 @@ POST /api/v1/dbs/{name}/query/natural
 ## implement-任务实现
 
 完成 phase x 的所有任务
+
+完成 phase 1 的所有任务，代码工程构建在 week02/db_query 下。
+
+在 week02/db_query 下撰写 Makefile 来完成基本工作，另外生成 week02/db_query/fixtures/test.rest, 使用rest client 来测试所有 API。
+

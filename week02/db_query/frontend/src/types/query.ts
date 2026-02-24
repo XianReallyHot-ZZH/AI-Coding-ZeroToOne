@@ -13,3 +13,12 @@ export interface QueryResult {
 export interface QueryRequest {
   sql: string;
 }
+
+export interface NaturalLanguageRequest {
+  question: string;
+}
+
+export interface GeneratedQuery {
+  sql: string;
+  explanation: string;
+}

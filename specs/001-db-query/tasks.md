@@ -142,17 +142,17 @@
 
 ### Backend for User Story 4
 
-- [ ] T050 [P] [US4] Create NaturalLanguageRequest model in `backend/src/models/query.py`
-- [ ] T051 [P] [US4] Create GeneratedQueryResponse model in `backend/src/models/query.py`
-- [ ] T052 [US4] Implement NlQueryService.build_schema_context() in `backend/src/services/nl_query.py` (format metadata for LLM)
-- [ ] T053 [US4] Implement NlQueryService.generate_sql() in `backend/src/services/nl_query.py` (call OpenAI API)
-- [ ] T054 [US4] Implement POST /api/v1/dbs/{name}/query/natural endpoint in `backend/src/api/query.py`
+- [x] T050 [P] [US4] Create NaturalLanguageRequest model in `backend/src/models/query.py`
+- [x] T051 [P] [US4] Create GeneratedQueryResponse model in `backend/src/models/query.py`
+- [x] T052 [US4] Implement NlQueryService.build_schema_context() in `backend/src/services/nl_query.py` (format metadata for LLM)
+- [x] T053 [US4] Implement NlQueryService.generate_sql() in `backend/src/services/nl_query.py` (call OpenAI API)
+- [x] T054 [US4] Implement POST /api/v1/dbs/{name}/query/natural endpoint in `backend/src/api/query.py`
 
 ### Frontend for User Story 4
 
-- [ ] T055 [P] [US4] Create NlQueryInput component in `frontend/src/components/NlQueryInput.tsx` (text input + generate button)
-- [ ] T056 [US4] Enhance QueryPage in `frontend/src/pages/QueryPage.tsx` (add tab for natural language input)
-- [ ] T057 [US4] Add natural language query to queryService in `frontend/src/services/queryService.ts`
+- [x] T055 [P] [US4] Create NlQueryInput component in `frontend/src/components/NlQueryInput.tsx` (text input + generate button)
+- [x] T056 [US4] Enhance QueryPage in `frontend/src/pages/QueryPage.tsx` (add tab for natural language input)
+- [x] T057 [US4] Add natural language query to queryService in `frontend/src/services/queryService.ts`
 
 **Checkpoint**: All user stories complete - full functionality available
 

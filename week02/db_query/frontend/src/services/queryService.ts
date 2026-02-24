@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import type { QueryRequest, QueryResult } from "@/types/query";
+import type { QueryRequest, QueryResult, NaturalLanguageRequest, GeneratedQuery } from "@/types/query";
 
 const API_URL = "/api/v1";
 
@@ -22,6 +22,18 @@ export function useExecuteQuery(dbName: string) {
     mutationFn: (sql: string) => {
       const request: QueryRequest = { sql };
       return fetchJson<QueryResult>(`${API_URL}/dbs/${dbName}/query`, {
+        method: "POST",
+        body: JSON.stringify(request),
+      });
+    },
+  });
+}
+
+export function useGenerateSql(dbName: string) {
+  return useMutation({
+    mutationFn: (question: string) => {
+      const request: NaturalLanguageRequest = { question };
+      return fetchJson<GeneratedQuery>(`${API_URL}/dbs/${dbName}/query/natural`, {
         method: "POST",
         body: JSON.stringify(request),
       });
