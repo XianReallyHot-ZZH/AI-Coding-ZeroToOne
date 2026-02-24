@@ -86,3 +86,16 @@ POST /api/v1/dbs/{name}/query/natural
 
 在 week02/db_query 下撰写 Makefile 来完成基本工作，另外生成 week02/db_query/fixtures/test.rest, 使用rest client 来测试所有 API。
 
+
+
+## 前端风格
+
+基于新的设计风格，把 week02/db_query 项目下的前端风格整体重构一下
+
+
+理解db_query项目后更新一下该项目的README.md内容
+
+
+
+
+

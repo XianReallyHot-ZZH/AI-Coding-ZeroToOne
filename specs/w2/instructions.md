@@ -19,3 +19,6 @@
 
 基于新的设计风格，把 ./week1/project-alpha/ 目录下的项目的整体风格重构一下
 
+
+
+阅读 ./specs/w2/, ./specs/001-db-query/, ./week02/db_query/ 目录下的文件，然后进行内容总结提炼，将内容填充进 ./README.md 文件中的week02部分
