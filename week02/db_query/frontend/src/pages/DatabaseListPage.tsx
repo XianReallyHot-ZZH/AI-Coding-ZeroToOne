@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { message, Typography } from "antd";
 import { DatabaseList } from "@/components/DatabaseList";
 import { DatabaseForm } from "@/components/DatabaseForm";
@@ -8,7 +7,6 @@ import type { DatabaseConnectionCreate } from "@/types/database";
 const { Title } = Typography;
 
 export function DatabaseListPage() {
-  const navigate = useNavigate();
   const { data: databases, isLoading, refetch } = useDatabaseList();
   const deleteMutation = useDeleteDatabase();
   const addMutation = useAddDatabase();

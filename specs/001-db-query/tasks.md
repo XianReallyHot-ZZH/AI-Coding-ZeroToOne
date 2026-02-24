@@ -90,18 +90,18 @@
 
 ### Backend for User Story 2
 
-- [ ] T030 [P] [US2] Create TableMetadataResponse model in `backend/src/models/metadata.py`
-- [ ] T031 [P] [US2] Create ColumnMetadataResponse model in `backend/src/models/metadata.py`
-- [ ] T032 [US2] Enhance GET /api/v1/dbs/{name} to include tables with columns in `backend/src/api/databases.py`
-- [ ] T033 [US2] Implement POST /api/v1/dbs/{name}/refresh endpoint in `backend/src/api/databases.py` (re-extract metadata)
-- [ ] T034 [US2] Add metadata caching logic to MetadataService in `backend/src/services/metadata.py` (load from SQLite cache)
+- [x] T030 [P] [US2] Create TableMetadataResponse model in `backend/src/models/metadata.py`
+- [x] T031 [P] [US2] Create ColumnMetadataResponse model in `backend/src/models/metadata.py`
+- [x] T032 [US2] Enhance GET /api/v1/dbs/{name} to include tables with columns in `backend/src/api/databases.py`
+- [x] T033 [US2] Implement POST /api/v1/dbs/{name}/refresh endpoint in `backend/src/api/databases.py` (re-extract metadata)
+- [x] T034 [US2] Add metadata caching logic to MetadataService in `backend/src/services/metadata.py` (load from SQLite cache)
 
 ### Frontend for User Story 2
 
-- [ ] T035 [P] [US2] Create MetadataBrowser component in `frontend/src/components/MetadataBrowser.tsx` (tree view of tables)
-- [ ] T036 [P] [US2] Create TableDetail component in `frontend/src/components/TableDetail.tsx` (column list with types)
-- [ ] T037 [US2] Create DatabaseDetailPage in `frontend/src/pages/DatabaseDetailPage.tsx` (metadata browser + table details)
-- [ ] T038 [US2] Add database detail route to `frontend/src/App.tsx`
+- [x] T035 [P] [US2] Create MetadataBrowser component in `frontend/src/components/MetadataBrowser.tsx` (tree view of tables)
+- [x] T036 [P] [US2] Create TableDetail component in `frontend/src/components/TableDetail.tsx` (column list with types)
+- [x] T037 [US2] Create DatabaseDetailPage in `frontend/src/pages/DatabaseDetailPage.tsx` (metadata browser + table details)
+- [x] T038 [US2] Add database detail route to `frontend/src/App.tsx`
 
 **Checkpoint**: User Stories 1 & 2 complete - users can browse database structure
 
@@ -115,20 +115,20 @@
 
 ### Backend for User Story 3
 
-- [ ] T039 [P] [US3] Create QueryRequest model in `backend/src/models/query.py`
-- [ ] T040 [P] [US3] Create QueryResultResponse model in `backend/src/models/query.py` (with ColumnInfo)
-- [ ] T041 [US3] Implement QueryService.validate_sql() in `backend/src/services/query.py` (use sqlglot, reject non-SELECT)
-- [ ] T042 [US3] Implement QueryService.transform_sql() in `backend/src/services/query.py` (auto-add LIMIT 1000)
-- [ ] T043 [US3] Implement QueryService.execute_query() in `backend/src/services/query.py` (run SQL, return results)
-- [ ] T044 [US3] Implement POST /api/v1/dbs/{name}/query endpoint in `backend/src/api/query.py`
+- [x] T039 [P] [US3] Create QueryRequest model in `backend/src/models/query.py`
+- [x] T040 [P] [US3] Create QueryResultResponse model in `backend/src/models/query.py` (with ColumnInfo)
+- [x] T041 [US3] Implement QueryService.validate_sql() in `backend/src/services/query.py` (use sqlglot, reject non-SELECT)
+- [x] T042 [US3] Implement QueryService.transform_sql() in `backend/src/services/query.py` (auto-add LIMIT 1000)
+- [x] T043 [US3] Implement QueryService.execute_query() in `backend/src/services/query.py` (run SQL, return results)
+- [x] T044 [US3] Implement POST /api/v1/dbs/{name}/query endpoint in `backend/src/api/query.py`
 
 ### Frontend for User Story 3
 
-- [ ] T045 [P] [US3] Create SqlEditor component in `frontend/src/components/SqlEditor.tsx` (Monaco editor wrapper)
-- [ ] T046 [P] [US3] Create QueryResult component in `frontend/src/components/QueryResult.tsx` (results table)
-- [ ] T047 [US3] Create QueryPage in `frontend/src/pages/QueryPage.tsx` (editor + results)
-- [ ] T048 [US3] Create queryService in `frontend/src/services/queryService.ts` (execute query API)
-- [ ] T049 [US3] Add query route to `frontend/src/App.tsx`
+- [x] T045 [P] [US3] Create SqlEditor component in `frontend/src/components/SqlEditor.tsx` (Monaco editor wrapper)
+- [x] T046 [P] [US3] Create QueryResult component in `frontend/src/components/QueryResult.tsx` (results table)
+- [x] T047 [US3] Create QueryPage in `frontend/src/pages/QueryPage.tsx` (editor + results)
+- [x] T048 [US3] Create queryService in `frontend/src/services/queryService.ts` (execute query API)
+- [x] T049 [US3] Add query route to `frontend/src/App.tsx`
 
 **Checkpoint**: User Stories 1, 2 & 3 complete - core query functionality works
 

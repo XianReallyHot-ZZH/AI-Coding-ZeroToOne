@@ -1,12 +1,14 @@
 import { Refine } from "@refinedev/core";
 import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
-import { ThemedLayoutV2, useNotificationProvider } from "@refinedev/antd";
+import { ThemedLayout, useNotificationProvider } from "@refinedev/antd";
 import routerProvider from "@refinedev/react-router";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ConfigProvider, App as AntdApp } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { dataProvider } from "./services/api";
 import { DatabaseListPage } from "./pages/DatabaseListPage";
+import { DatabaseDetailPage } from "./pages/DatabaseDetailPage";
+import { QueryPage } from "./pages/QueryPage";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -46,7 +48,7 @@ function App() {
                   },
                 ]}
               >
-                <ThemedLayoutV2>
+                <ThemedLayout>
                   <Routes>
                     <Route
                       path="/"
@@ -60,26 +62,10 @@ function App() {
                       }
                     />
                     <Route path="/dbs" element={<DatabaseListPage />} />
-                    <Route
-                      path="/dbs/:id"
-                      element={
-                        <div className="p-6">
-                          <h1 className="text-xl font-semibold">Database Details</h1>
-                          <p className="mt-2 text-gray-600">Coming soon...</p>
-                        </div>
-                      }
-                    />
-                    <Route
-                      path="/dbs/:id/query"
-                      element={
-                        <div className="p-6">
-                          <h1 className="text-xl font-semibold">Query</h1>
-                          <p className="mt-2 text-gray-600">Coming soon...</p>
-                        </div>
-                      }
-                    />
+                    <Route path="/dbs/:id" element={<DatabaseDetailPage />} />
+                    <Route path="/dbs/:id/query" element={<QueryPage />} />
                   </Routes>
-                </ThemedLayoutV2>
+                </ThemedLayout>
                 <RefineKbar />
               </Refine>
             </AntdApp>

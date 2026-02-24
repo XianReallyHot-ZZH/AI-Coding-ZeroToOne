@@ -16,6 +16,12 @@ export interface TableMetadata {
   columns: ColumnMetadata[];
 }
 
-export interface DatabaseDetail extends DatabaseConnection {
+export interface DatabaseDetail {
+  name: string;
+  connectionUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  tableCount: number;
+  viewCount: number;
   tables: TableMetadata[];
 }

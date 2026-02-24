@@ -15,9 +15,11 @@ from src.models.database import (
     DatabaseConnectionResponse,
     mask_connection_url,
 )
-from src.models.errors import (
-    ConnectionAlreadyExistsError,
-    ConnectionNotFoundError,
+from src.models.metadata import (
+    ColumnMetadataResponse,
+    DatabaseDetailResponse,
+    TableMetadataResponse,
+    TableType,
 )
 from src.services.connection import ConnectionManager
 from src.services.metadata import MetadataService
@@ -41,6 +43,32 @@ def get_column_repo(
     db: Annotated[Session, Depends(get_db)]
 ) -> ColumnMetadataRepository:
     return ColumnMetadataRepository(db)
+
+
+def _build_table_responses(tables: list, column_repo: ColumnMetadataRepository) -> list[TableMetadataResponse]:
+    responses = []
+    for table in tables:
+        columns = column_repo.get_by_table(table.id)
+        column_responses = [
+            ColumnMetadataResponse(
+                column_name=col.column_name,
+                data_type=col.data_type,
+                is_nullable=col.is_nullable,
+                is_primary_key=col.is_primary_key,
+                default_value=col.default_value,
+                position=col.position,
+            )
+            for col in columns
+        ]
+        responses.append(
+            TableMetadataResponse(
+                schema_name=table.schema_name,
+                table_name=table.table_name,
+                table_type=TableType(table.table_type),
+                columns=column_responses,
+            )
+        )
+    return responses
 
 
 @router.get("/dbs", response_model=DatabaseConnectionListResponse)
@@ -113,11 +141,12 @@ async def add_database(
     )
 
 
-@router.get("/dbs/{name}", response_model=DatabaseConnectionResponse)
+@router.get("/dbs/{name}", response_model=DatabaseDetailResponse)
 async def get_database(
     name: str,
     repo: Annotated[ConnectionRepository, Depends(get_connection_repo)],
     table_repo: Annotated[TableMetadataRepository, Depends(get_table_repo)],
+    column_repo: Annotated[ColumnMetadataRepository, Depends(get_column_repo)],
 ):
     conn = repo.get(name)
     if not conn:
@@ -130,16 +159,62 @@ async def get_database(
         )
 
     tables = table_repo.get_by_database(name)
+    table_responses = _build_table_responses(tables, column_repo)
+    
     table_count = sum(1 for t in tables if t.table_type == "table")
     view_count = sum(1 for t in tables if t.table_type == "view")
 
-    return DatabaseConnectionResponse(
+    return DatabaseDetailResponse(
         name=conn.name,
         connection_url=mask_connection_url(conn.connection_url),
-        created_at=conn.created_at,
-        updated_at=conn.updated_at,
+        created_at=conn.created_at.isoformat(),
+        updated_at=conn.updated_at.isoformat(),
         table_count=table_count,
         view_count=view_count,
+        tables=table_responses,
+    )
+
+
+@router.post("/dbs/{name}/refresh", response_model=DatabaseDetailResponse)
+async def refresh_database(
+    name: str,
+    repo: Annotated[ConnectionRepository, Depends(get_connection_repo)],
+    table_repo: Annotated[TableMetadataRepository, Depends(get_table_repo)],
+    column_repo: Annotated[ColumnMetadataRepository, Depends(get_column_repo)],
+):
+    conn = repo.get(name)
+    if not conn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "CONNECTION_NOT_FOUND",
+                "message": f"Database connection '{name}' not found",
+            },
+        )
+
+    ConnectionManager.test_connection(name, conn.connection_url)
+
+    table_count, view_count = MetadataService.extract_metadata(
+        db_name=name,
+        connection_url=conn.connection_url,
+        table_repo=table_repo,
+        column_repo=column_repo,
+    )
+
+    repo.update_timestamp(name)
+
+    conn = repo.get(name)
+    tables = table_repo.get_by_database(name)
+    table_responses = _build_table_responses(tables, column_repo)
+
+    return DatabaseDetailResponse(
+        name=conn.name,
+        connection_url=mask_connection_url(conn.connection_url),
+        created_at=conn.created_at.isoformat(),
+        updated_at=conn.updated_at.isoformat(),
+        table_count=table_count,
+        view_count=view_count,
+        tables=table_responses,
     )
 
 

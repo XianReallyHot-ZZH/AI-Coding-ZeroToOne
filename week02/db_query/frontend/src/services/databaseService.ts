@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DatabaseConnection, DatabaseConnectionCreate, DatabaseConnectionListResponse } from "@/types/database";
+import type { DatabaseDetail } from "@/types/metadata";
 
 const API_URL = "/api/v1";
 
@@ -33,6 +34,14 @@ export function useDatabase(name: string) {
   });
 }
 
+export function useDatabaseDetail(name: string) {
+  return useQuery({
+    queryKey: ["databases", name, "detail"],
+    queryFn: () => fetchJson<DatabaseDetail>(`${API_URL}/dbs/${name}`),
+    enabled: !!name,
+  });
+}
+
 export function useAddDatabase() {
   const queryClient = useQueryClient();
 
@@ -56,6 +65,20 @@ export function useDeleteDatabase() {
       fetchJson<void>(`${API_URL}/dbs/${name}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["databases"] });
+    },
+  });
+}
+
+export function useRefreshDatabase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (name: string) =>
+      fetchJson<DatabaseDetail>(`${API_URL}/dbs/${name}/refresh`, {
+        method: "POST",
+      }),
+    onSuccess: (_, name) => {
+      queryClient.invalidateQueries({ queryKey: ["databases", name, "detail"] });
     },
   });
 }

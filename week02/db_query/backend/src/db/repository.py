@@ -7,7 +7,12 @@ from src.config import settings
 from src.db.models import Base, ColumnMetadata, DatabaseConnection, TableMetadata
 
 
-engine = create_engine(f"sqlite:///{settings.sqlite_path}", echo=False)
+def _get_sqlite_url() -> str:
+    sqlite_path = settings.sqlite_path
+    return f"sqlite:///{sqlite_path.as_posix()}"
+
+
+engine = create_engine(_get_sqlite_url(), echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

@@ -1,9 +1,9 @@
-import { DataProvider } from "@refinedev/core";
+import type { DataProvider } from "@refinedev/core";
 
 const API_URL = "/api/v1";
 
 export const dataProvider: DataProvider = {
-  getList: async ({ resource, pagination, filters, sorters }) => {
+  getList: async ({ resource }) => {
     const response = await fetch(`${API_URL}/${resource}`);
     
     if (!response.ok) {
@@ -70,7 +70,7 @@ export const dataProvider: DataProvider = {
       throw new Error(error.error?.message || `Failed to delete ${resource}`);
     }
     
-    return { data: { id } };
+    return { data: { id } as never };
   },
 
   getApiUrl: () => API_URL,
