@@ -104,8 +104,7 @@ week02/db_query/
 - 快速开始指南
 
 **项目效果截图**:
-![Database Query Tool](week02\db_query\877eadeb25c8afc6386ba44d8ebab619.png)
-
+![Database Query Tool](week02/db_query/877eadeb25c8afc6386ba44d8ebab619.png)
 
 
 ## week03
