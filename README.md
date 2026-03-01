@@ -107,7 +107,65 @@ week02/db_query/
 ![Database Query Tool](week02/db_query/877eadeb25c8afc6386ba44d8ebab619.png)
 
 
-## week03
+## week03 - 代码审查实践 & 架构改进设计
+
+### 自定义代码审查 Command
+
+借鉴 speckit.specify 命令结构，创建了针对 Python 和 TypeScript 代码的深度审查命令 `codereview.deep`。
+
+**审查维度**：
+- **架构和设计**：Python/TypeScript 最佳实践、接口设计、可扩展性
+- **代码质量**：DRY、YAGNI、SOLID、KISS 原则
+- **代码规范**：函数不超过 150 行、参数不超过 7 个
+
+### 代码审查报告：Database Query Tool
+
+使用 `/codereview.deep` 对 week02 项目进行深度审查：
+[结果参考](.\specs\w3\0001-db-query-code-review-report.md)
+
+### 增量功能开发实践
+
+借助 speckit.task 实现 对新增功能 mysql support 的任务拆解与设计，形成 ./specs/002-mysql-support/ 目录下的 文件。
+
+### 架构改进设计：可扩展数据库适配器
+
+针对代码审查发现的扩展性问题，设计了完整的架构改进方案。
+
+**设计目标**：
+- **开闭原则 (OCP)**：添加新数据库只需新增适配器模块，无需修改现有代码
+- **单一职责 (SRP)**：连接管理、元数据提取、查询执行职责分离
+- **依赖倒置 (DIP)**：高层模块依赖抽象接口，不依赖具体实现
+
+**核心设计模式**：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Adapter Interface Layer                       │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │              DatabaseAdapter (Abstract Base)                ││
+│  │  ┌─────────────┐ ┌──────────────┐ ┌─────────────────────┐  ││
+│  │  │IConnection  │ │ IMetadata    │ │ ISQLDialect         │  ││
+│  │  │Adapter      │ │ Adapter      │ │                     │  ││
+│  │  └─────────────┘ └──────────────┘ └─────────────────────┘  ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+            │                     │                    │
+            ▼                     ▼                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌───────────┐  │
+│  │MySQLAdapter│  │SQLiteAdapt │  │PostgresAdpt│  │OracleAdapt│  │
+│  └────────────┘  └────────────┘  └────────────┘  └───────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**架构改进文档**：
+- [当前架构分析](specs/w3/db-query-architecture-improvement/01-current-analysis.md)
+- [SOLID 原则应用](specs/w3/db-query-architecture-improvement/02-design-principles.md)
+- [核心接口设计](specs/w3/db-query-architecture-improvement/03-interface-design.md)
+- [适配器模式实现](specs/w3/db-query-architecture-improvement/04-adapter-pattern.md)
+- [注册表模式](specs/w3/db-query-architecture-improvement/05-registry-pattern.md)
+- [实现指南](specs/w3/db-query-architecture-improvement/06-implementation-guide.md)
+- [迁移计划](specs/w3/db-query-architecture-improvement/07-migration-plan.md)
 
 
 

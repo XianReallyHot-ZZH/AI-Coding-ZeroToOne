@@ -16,3 +16,19 @@
 ## code review execution
 
 /codereview.deep ./week02/db_query
+
+## db-query 添加 mysql db 支持
+
+/speckit.tasks 参考 ./week02/db_query/backend 中的 PostgreSQL 实现，实现 MySQL 的 metadata 提取和查询支持，同时自然语言生成 sql 也支持 MySQL。目前我本地有一个 yyconfig 数据库，使用 `mysql -u root yyconfig -e "SELECT * FROM yyconfig;"` 可以查询到数据。将生成的md文件写到 ./specs/002-mysql-support/ 路径下。
+
+
+/speckit.implement 根据 ./specs/002-mysql-support/ 路径下的 tasks.md 文件实现 mysql support。
+
+## review db-query 新增功能后的代码
+
+帮我仔细查看 ./week02/db_query/backend 的架构，最好设计一套 interface，为以后添加更多数据库留有余地，不至于到处修改已有代码。设计要符合 Open-Close 和 SOLID 原则，要有好的扩展性。新的设计形成文档放在 ./specs/w3/db-query-architecture-improvement 路径下。 
+
+## 架构演进重构
+
+根据 ./specs/w3/db-query-architecture-improvement 路径下的文档，对 ./week02/db_query/backend 进行架构演进重构。
+
