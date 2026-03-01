@@ -46,20 +46,38 @@ def get_column_repo(
 
 
 def _build_table_responses(tables: list, column_repo: ColumnMetadataRepository) -> list[TableMetadataResponse]:
+    # Deduplicate tables by (schema_name, table_name) to handle any duplicate data
+    seen_tables: set[tuple[str, str]] = set()
     responses = []
+
     for table in tables:
+        table_key = (table.schema_name, table.table_name)
+        if table_key in seen_tables:
+            continue
+        seen_tables.add(table_key)
+
         columns = column_repo.get_by_table(table.id)
-        column_responses = [
-            ColumnMetadataResponse(
-                column_name=col.column_name,
-                data_type=col.data_type,
-                is_nullable=col.is_nullable,
-                is_primary_key=col.is_primary_key,
-                default_value=col.default_value,
-                position=col.position,
+
+        # Deduplicate columns by (column_name, position) to handle any duplicate data
+        seen_columns: set[tuple[str, int]] = set()
+        column_responses = []
+        for col in columns:
+            col_key = (col.column_name, col.position)
+            if col_key in seen_columns:
+                continue
+            seen_columns.add(col_key)
+
+            column_responses.append(
+                ColumnMetadataResponse(
+                    column_name=col.column_name,
+                    data_type=col.data_type,
+                    is_nullable=col.is_nullable,
+                    is_primary_key=col.is_primary_key,
+                    default_value=col.default_value,
+                    position=col.position,
+                )
             )
-            for col in columns
-        ]
+
         responses.append(
             TableMetadataResponse(
                 schema_name=table.schema_name,

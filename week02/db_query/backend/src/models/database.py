@@ -14,7 +14,7 @@ class DatabaseConnectionCreate(BaseResponseModel):
     def validate_url(cls, v: str) -> str:
         if not v:
             raise ValueError("Connection URL is required")
-        valid_prefixes = ("postgresql://", "postgres://", "mysql://", "sqlite://")
+        valid_prefixes = ("postgresql://", "postgres://", "mysql://", "mysql+pymysql://", "sqlite://")
         if not any(v.lower().startswith(prefix) for prefix in valid_prefixes):
             raise ValueError("Invalid connection URL format")
         return v

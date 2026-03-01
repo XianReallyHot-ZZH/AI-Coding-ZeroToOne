@@ -127,6 +127,7 @@ async def generate_sql_from_natural_language(
         sql, explanation = NlQueryService.generate_sql(
             question=request.question,
             schema_context=schema_context,
+            connection_url=conn.connection_url,
         )
 
         return GeneratedQueryResponse(

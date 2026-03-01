@@ -62,7 +62,7 @@ export function DatabaseListPage() {
           Your Databases
         </h1>
         <Text className="text-[var(--md-gray-600)] text-lg">
-          Connect and manage your PostgreSQL databases
+          Connect and manage your PostgreSQL, MySQL, and SQLite databases
         </Text>
       </div>
 

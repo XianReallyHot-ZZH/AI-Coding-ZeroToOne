@@ -91,8 +91,8 @@ function HomePage() {
         </h1>
         
         <p className="text-base md:text-lg text-[var(--md-gray-600)] leading-relaxed mb-8 md:mb-10 max-w-lg mx-auto">
-          Connect to PostgreSQL databases, browse metadata, execute SQL queries, 
-          and generate queries using natural language.
+          Connect to PostgreSQL, MySQL, and SQLite databases, browse metadata,
+          execute SQL queries, and generate queries using natural language.
         </p>
         
         <div className="flex items-center justify-center gap-4">
@@ -112,7 +112,7 @@ function HomePage() {
             <DatabaseOutlined className="text-[var(--md-blue)]" />
           </div>
           <h3 className="font-bold text-[var(--md-blue)] text-sm md:text-base mb-1 md:mb-2">Connect</h3>
-          <p className="text-xs md:text-sm text-[var(--md-gray-600)]">Add PostgreSQL database connections securely</p>
+          <p className="text-xs md:text-sm text-[var(--md-gray-600)]">Add PostgreSQL, MySQL, and SQLite connections securely</p>
         </div>
         
         <div className="md-card text-center">

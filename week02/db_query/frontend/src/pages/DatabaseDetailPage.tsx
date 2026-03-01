@@ -101,12 +101,19 @@ export function DatabaseDetailPage() {
 
   const tables = database.tables || [];
 
+  // Generate unique key for table selection comparison
+  const getTableKey = (table: TableMetadata) => `${table.schemaName}.${table.tableName}`;
+
+  // Check if a table is currently selected
+  const isSelectedTable = (table: TableMetadata) =>
+    selectedTable ? getTableKey(selectedTable) === getTableKey(table) : false;
+
   const treeData = tables.map((table) => ({
-    key: `${table.schemaName}.${table.tableName}`,
+    key: getTableKey(table),
     title: (
       <div
         className={`flex items-center gap-3 py-1.5 px-2 rounded-[var(--radius-sm)] cursor-pointer transition-colors ${
-          selectedTable?.tableName === table.tableName ? "bg-[var(--md-yellow-pale)]" : "hover:bg-[var(--md-gray-100)]"
+          isSelectedTable(table) ? "bg-[var(--md-yellow-pale)]" : "hover:bg-[var(--md-gray-100)]"
         }`}
         onClick={() => handleSelectTable(table)}
       >
@@ -122,7 +129,7 @@ export function DatabaseDetailPage() {
       </div>
     ),
     children: table.columns.map((col) => ({
-      key: `${table.schemaName}.${table.tableName}.${col.columnName}`,
+      key: `${table.schemaName}.${table.tableName}.${col.columnName}.${col.position}`,
       title: (
         <div className="flex items-center gap-3 py-1 px-2">
           <Text className="text-sm font-medium">{col.columnName}</Text>
@@ -142,10 +149,6 @@ export function DatabaseDetailPage() {
       isLeaf: true,
     })),
   }));
-
-  const autoExpandKeys = selectedTable
-    ? [`${selectedTable.schemaName}.${selectedTable.tableName}`]
-    : [];
 
   return (
     <div className="max-w-7xl mx-auto p-8">
@@ -214,7 +217,7 @@ export function DatabaseDetailPage() {
               <div className="max-h-[600px] overflow-auto">
                 <Tree
                   treeData={treeData}
-                  expandedKeys={[...expandedKeys, ...autoExpandKeys]}
+                  expandedKeys={expandedKeys}
                   onExpand={(keys) => setExpandedKeys(keys)}
                   showLine={{ showLeafIcon: false }}
                   blockNode
@@ -262,7 +265,7 @@ export function DatabaseDetailPage() {
                   <tbody>
                     {selectedTable.columns.map((col, idx) => (
                       <tr
-                        key={col.columnName}
+                        key={`${col.columnName}-${col.position}`}
                         className={`border-b border-[var(--md-gray-200)] hover:bg-[var(--md-yellow-pale)] transition-colors ${
                           idx % 2 === 0 ? "bg-white" : "bg-[var(--md-gray-100)]"
                         }`}
