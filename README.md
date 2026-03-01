@@ -121,7 +121,7 @@ week02/db_query/
 ### 代码审查报告：Database Query Tool
 
 使用 `/codereview.deep` 对 week02 项目进行深度审查：
-[结果参考](.\specs\w3\0001-db-query-code-review-report.md)
+[结果参考](specs/w3/0001-db-query-code-review-report.md)
 
 ### 增量功能开发实践
 
