@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.adapters import adapter_registry, ensure_adapters_registered
 from src.api import databases, query
 from src.config import settings
 from src.db.repository import init_db
@@ -12,7 +13,10 @@ from src.models.errors import AppException
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize database
     init_db()
+    # Ensure adapters are registered (important for hot reload)
+    ensure_adapters_registered()
     yield
 
 

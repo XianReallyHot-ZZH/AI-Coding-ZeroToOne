@@ -1,8 +1,17 @@
+"""Natural language to SQL query service.
+
+This module provides natural language query generation using the adapter pattern.
+Database-specific behavior is delegated to the appropriate adapter.
+"""
+
+import json
+import warnings
+
 from openai import OpenAI
 
+from src.adapters import adapter_factory
 from src.config import settings
 from src.db.repository import ColumnMetadataRepository, TableMetadataRepository
-from src.services.connection import get_db_type
 
 client = OpenAI(
     api_key=settings.deepseek_api_key,
@@ -11,34 +20,31 @@ client = OpenAI(
 
 
 def get_system_prompt(db_type: str = "postgresql") -> str:
-    """Generate database-type aware system prompt."""
-    db_specific_rules = {
-        "mysql": """
-MySQL-specific rules:
-- Use backticks (`) for identifier quoting if needed
-- Use LIMIT n syntax (same as PostgreSQL)
-- String literals use single quotes
-- Boolean values: TRUE/FALSE or 1/0
-- Date/time functions: NOW(), CURDATE(), DATE_FORMAT()
-- Use IFNULL() instead of COALESCE for single argument""",
-        "postgresql": """
+    """Generate database-type aware system prompt.
+
+    .. deprecated::
+        Use adapter_factory.get_adapter_by_type(db_type).get_nl_system_prompt() instead.
+    """
+    warnings.warn(
+        "get_system_prompt is deprecated. Use adapter.get_nl_system_prompt() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    # Get adapter if available
+    try:
+        adapter = adapter_factory.get_adapter_by_type(db_type)
+        db_rules = adapter.get_nl_system_prompt()
+    except Exception:
+        # Fallback rules
+        db_rules = """
 PostgreSQL-specific rules:
 - Use double quotes (") for identifier quoting if needed
 - Use LIMIT n syntax
 - String literals use single quotes
 - Boolean values: true/false
 - Date/time functions: NOW(), CURRENT_DATE, TO_CHAR()
-- Use COALESCE() for null handling""",
-        "sqlite": """
-SQLite-specific rules:
-- No identifier quoting needed in most cases
-- Use LIMIT n syntax
-- String literals use single quotes
-- No native boolean type (use 0/1)
-- Date/time functions: datetime(), date(), strftime()""",
-    }
-
-    db_rules = db_specific_rules.get(db_type, db_specific_rules["postgresql"])
+- Use COALESCE() for null handling"""
 
     return f"""You are an expert SQL assistant. Given a database schema and a natural language question, generate a valid SQL SELECT query.
 
@@ -61,6 +67,8 @@ Respond in the following JSON format:
 
 
 class NlQueryService:
+    """Service for generating SQL from natural language questions."""
+
     @classmethod
     def build_schema_context(
         cls,
@@ -68,6 +76,16 @@ class NlQueryService:
         table_repo: TableMetadataRepository,
         column_repo: ColumnMetadataRepository,
     ) -> str:
+        """Build a schema context string for the LLM.
+
+        Args:
+            db_name: Database connection name
+            table_repo: Repository for table metadata
+            column_repo: Repository for column metadata
+
+        Returns:
+            Formatted schema context string
+        """
         tables = table_repo.get_by_database(db_name)
 
         if not tables:
@@ -121,11 +139,43 @@ class NlQueryService:
 
         # Detect database type from connection URL or use provided type
         if db_type is None and connection_url:
-            db_type = get_db_type(connection_url)
+            db_type = adapter_factory.get_db_type(connection_url)
         elif db_type is None:
             db_type = "postgresql"  # Default fallback
 
-        system_prompt = get_system_prompt(db_type)
+        # Get adapter and build system prompt
+        try:
+            adapter = adapter_factory.get_adapter_by_type(db_type)
+            db_rules = adapter.get_nl_system_prompt()
+        except Exception:
+            # Fallback to PostgreSQL rules
+            db_rules = """
+PostgreSQL-specific rules:
+- Use double quotes (") for identifier quoting if needed
+- Use LIMIT n syntax
+- String literals use single quotes
+- Boolean values: true/false
+- Date/time functions: NOW(), CURRENT_DATE, TO_CHAR()
+- Use COALESCE() for null handling"""
+
+        system_prompt = f"""You are an expert SQL assistant. Given a database schema and a natural language question, generate a valid SQL SELECT query.
+
+Rules:
+1. Only generate SELECT queries. Never generate INSERT, UPDATE, DELETE, or DDL statements.
+2. Use proper table and column names from the provided schema.
+3. Include appropriate JOINs when the question requires data from multiple tables.
+4. Add WHERE clauses to filter data based on the question.
+5. Use LIMIT when appropriate to avoid returning too many rows.
+6. Return the SQL query and a brief explanation of what the query does.
+
+Database type: {db_type.upper()}
+{db_rules}
+
+Respond in the following JSON format:
+{{
+  "sql": "your SQL query here",
+  "explanation": "brief explanation of the query"
+}}"""
 
         user_prompt = f"""Database Schema:
 {schema_context}
@@ -147,8 +197,6 @@ Generate a SQL query to answer this question."""
         content = response.choices[0].message.content
         if not content:
             raise ValueError("Empty response from Deepseek")
-
-        import json
 
         result = json.loads(content)
 

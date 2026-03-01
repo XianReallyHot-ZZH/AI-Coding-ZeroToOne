@@ -1,71 +1,69 @@
+"""Database metadata extraction service.
+
+This module provides metadata extraction using the adapter pattern.
+Database-specific behavior is delegated to the appropriate adapter.
+"""
+
+import warnings
+
 from sqlalchemy import inspect
 
+from src.adapters import adapter_factory
 from src.db.repository import (
     ColumnMetadataRepository,
     TableMetadataRepository,
 )
-from src.services.connection import (
-    ConnectionManager,
-    extract_database_name,
-    get_db_type,
-)
+from src.services.connection import ConnectionManager
+
+
+# =============================================================================
+# Legacy Functions (deprecated, kept for backward compatibility)
+# =============================================================================
 
 
 def normalize_data_type(data_type: str) -> str:
-    """Normalize MySQL-specific data types for consistent display."""
-    # MySQL type mappings for cleaner display
-    type_mappings = {
-        "VARCHAR": "VARCHAR",
-        "CHAR": "CHAR",
-        "TEXT": "TEXT",
-        "TINYTEXT": "TEXT",
-        "MEDIUMTEXT": "TEXT",
-        "LONGTEXT": "TEXT",
-        "BLOB": "BLOB",
-        "TINYBLOB": "BLOB",
-        "MEDIUMBLOB": "BLOB",
-        "LONGBLOB": "BLOB",
-        "DATETIME": "DATETIME",
-        "TIMESTAMP": "TIMESTAMP",
-        "DATE": "DATE",
-        "TIME": "TIME",
-        "YEAR": "YEAR",
-        "DECIMAL": "DECIMAL",
-        "NUMERIC": "DECIMAL",
-        "FLOAT": "FLOAT",
-        "DOUBLE": "DOUBLE",
-        "INT": "INT",
-        "INTEGER": "INT",
-        "TINYINT": "TINYINT",
-        "SMALLINT": "SMALLINT",
-        "MEDIUMINT": "MEDIUMINT",
-        "BIGINT": "BIGINT",
-        "BIT": "BIT",
-        "BOOLEAN": "BOOLEAN",
-        "BOOL": "BOOLEAN",
-        "ENUM": "ENUM",
-        "SET": "SET",
-        "JSON": "JSON",
-        "BINARY": "BINARY",
-        "VARBINARY": "VARBINARY",
-    }
-    # Extract base type name (handle types like VARCHAR(255))
-    base_type = data_type.split("(")[0].upper().strip()
-    return type_mappings.get(base_type, data_type)
+    """Normalize MySQL-specific data types for consistent display.
+
+    .. deprecated::
+        Use adapter.normalize_data_type() instead.
+    """
+    warnings.warn(
+        "normalize_data_type is deprecated. Use adapter.normalize_data_type() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    # Use MySQL adapter for backward compatibility
+    from src.adapters.mysql import MySQLAdapter
+
+    adapter = MySQLAdapter()
+    return adapter.normalize_data_type(data_type)
 
 
 def normalize_default_value(default_value: str | None) -> str | None:
-    """Normalize MySQL default value format."""
-    if default_value is None:
-        return None
-    # Remove MySQL-specific wrappers
-    if isinstance(default_value, str):
-        # Handle MySQL function defaults like CURRENT_TIMESTAMP
-        default_value = default_value.strip()
-    return str(default_value)
+    """Normalize MySQL default value format.
+
+    .. deprecated::
+        Use adapter.normalize_default_value() instead.
+    """
+    warnings.warn(
+        "normalize_default_value is deprecated. Use adapter.normalize_default_value() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    from src.adapters.mysql import MySQLAdapter
+
+    adapter = MySQLAdapter()
+    return adapter.normalize_default_value(default_value)
+
+
+# =============================================================================
+# Metadata Service (uses adapter pattern)
+# =============================================================================
 
 
 class MetadataService:
+    """Service for extracting and managing database metadata."""
+
     @classmethod
     def extract_metadata(
         cls,
@@ -74,57 +72,71 @@ class MetadataService:
         table_repo: TableMetadataRepository,
         column_repo: ColumnMetadataRepository,
     ) -> tuple[int, int]:
+        """Extract metadata (tables, views, columns) from a database.
+
+        Uses the appropriate adapter to handle database-specific
+        schema extraction and type normalization.
+
+        Args:
+            db_name: Database connection name
+            connection_url: Database connection URL
+            table_repo: Repository for table metadata
+            column_repo: Repository for column metadata
+
+        Returns:
+            Tuple of (table_count, view_count)
+        """
         engine = ConnectionManager.get_engine(db_name, connection_url)
         inspector = inspect(engine)
-        db_type = get_db_type(connection_url)
 
+        # Get adapter for database-specific behavior
+        adapter = adapter_factory.get_adapter(connection_url)
+
+        # Clear existing metadata
         table_repo.delete_by_database(db_name)
 
         table_count = 0
         view_count = 0
 
-        # For MySQL, only extract from the connected database
-        if db_type == "mysql":
-            target_db = extract_database_name(connection_url)
-            if target_db:
-                schema_names = [target_db]
-            else:
-                # No database specified in URL, get all (fallback)
-                schema_names = inspector.get_schema_names()
-        elif db_type == "postgresql":
-            # For PostgreSQL, only extract from 'public' schema by default
-            # This avoids extracting from system schemas like information_schema, pg_catalog
-            schema_names = ["public"]
-        else:
-            # Other DBs: use default logic
-            schema_names = [None]
+        # Extract schemas using adapter
+        schemas = adapter.extract_schemas(inspector, connection_url)
 
-        for schema_name in schema_names:
-            # For MySQL, schema_name is the database name
-            # Use the schema_name if available, otherwise use the db_name
-            effective_schema = schema_name if schema_name else db_name
+        for schema_info in schemas:
+            schema_name = schema_info.name
 
-            for table_name in inspector.get_table_names(schema=schema_name):
+            # Extract tables
+            for table_name in inspector.get_table_names(schema=schema_name if adapter.supports_schemas else None):
                 table = table_repo.create(
                     db_name=db_name,
-                    schema_name=effective_schema,
+                    schema_name=schema_name,
                     table_name=table_name,
                     table_type="table",
                 )
                 cls._extract_columns(
-                    inspector, table.id, table_name, schema_name, column_repo, db_type
+                    inspector=inspector,
+                    table_id=table.id,
+                    table_name=table_name,
+                    schema_name=schema_name if adapter.supports_schemas else None,
+                    column_repo=column_repo,
+                    adapter=adapter,
                 )
                 table_count += 1
 
-            for view_name in inspector.get_view_names(schema=schema_name):
+            # Extract views
+            for view_name in inspector.get_view_names(schema=schema_name if adapter.supports_schemas else None):
                 table = table_repo.create(
                     db_name=db_name,
-                    schema_name=effective_schema,
+                    schema_name=schema_name,
                     table_name=view_name,
                     table_type="view",
                 )
                 cls._extract_columns(
-                    inspector, table.id, view_name, schema_name, column_repo, db_type
+                    inspector=inspector,
+                    table_id=table.id,
+                    table_name=view_name,
+                    schema_name=schema_name if adapter.supports_schemas else None,
+                    column_repo=column_repo,
+                    adapter=adapter,
                 )
                 view_count += 1
 
@@ -138,8 +150,18 @@ class MetadataService:
         table_name: str,
         schema_name: str | None,
         column_repo: ColumnMetadataRepository,
-        db_type: str = "unknown",
+        adapter,
     ) -> None:
+        """Extract column metadata for a table.
+
+        Args:
+            inspector: SQLAlchemy inspector
+            table_id: ID of the table record
+            table_name: Name of the table
+            schema_name: Schema name (or None)
+            column_repo: Repository for column metadata
+            adapter: Database adapter for type normalization
+        """
         columns = inspector.get_columns(table_name, schema=schema_name)
         pk_columns = set(
             inspector.get_pk_constraint(table_name, schema=schema_name).get(
@@ -149,13 +171,10 @@ class MetadataService:
 
         for position, col in enumerate(columns, start=1):
             raw_type = str(col.get("type", "unknown"))
-            # Normalize data types for MySQL
-            if db_type == "mysql":
-                data_type = normalize_data_type(raw_type)
-                default_value = normalize_default_value(col.get("default"))
-            else:
-                data_type = raw_type
-                default_value = col.get("default")
+
+            # Use adapter to normalize type and default value
+            data_type = adapter.normalize_data_type(raw_type)
+            default_value = adapter.normalize_default_value(col.get("default"))
 
             column_repo.create(
                 table_metadata_id=table_id,
@@ -169,6 +188,14 @@ class MetadataService:
 
     @classmethod
     def build_schema_context(cls, tables: list) -> str:
+        """Build a human-readable schema context string.
+
+        Args:
+            tables: List of table metadata objects with columns
+
+        Returns:
+            Formatted string describing the schema
+        """
         lines = []
         for table in tables:
             columns_str = ", ".join(

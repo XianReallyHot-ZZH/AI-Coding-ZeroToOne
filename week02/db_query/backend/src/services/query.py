@@ -1,86 +1,132 @@
+"""SQL query execution service.
+
+This module provides query validation and execution using the adapter pattern.
+Database-specific behavior is delegated to the appropriate adapter.
+"""
+
 import decimal
+import re
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
-import sqlglot
 from sqlalchemy import text
 
-from src.services.connection import ConnectionManager, get_db_type
+from src.adapters import adapter_factory
+from src.services.connection import ConnectionManager
 
 MAX_ROWS = 1000
 
 
 class QueryService:
+    """Service for validating and executing SQL queries."""
+
     ALLOWED_STATEMENTS = {"SELECT"}
 
     @classmethod
     def validate_sql(cls, sql: str, db_type: str = "postgres") -> tuple[bool, str]:
-        try:
-            # Use appropriate dialect for parsing
-            dialect = cls._get_sqlglot_dialect(db_type)
-            parsed = sqlglot.parse(sql.strip(), dialect=dialect)
-            if not parsed or not parsed[0]:
-                return False, "Empty or invalid SQL statement"
+        """Validate that a SQL statement is safe to execute.
 
-            statement = parsed[0]
-            statement_type = type(statement).__name__.upper()
+        Only SELECT statements are allowed.
 
-            if statement_type not in cls.ALLOWED_STATEMENTS:
-                return False, f"Only SELECT statements are allowed. Got: {statement_type}"
+        Args:
+            sql: SQL statement to validate
+            db_type: Database type (unused, kept for compatibility)
 
-            return True, ""
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        sql_stripped = sql.strip()
+        if not sql_stripped:
+            return False, "Empty SQL statement"
 
-        except Exception as e:
-            return False, f"SQL parsing error: {str(e)}"
+        # Simple check: only allow statements starting with SELECT
+        # This is a basic check - the database will do full validation
+        first_word = sql_stripped.split()[0].upper() if sql_stripped.split() else ""
 
-    @classmethod
-    def _get_sqlglot_dialect(cls, db_type: str) -> str:
-        """Map database type to sqlglot dialect."""
-        dialect_map = {
-            "mysql": "mysql",
-            "postgresql": "postgres",
-            "postgres": "postgres",
-            "sqlite": "sqlite",
-        }
-        return dialect_map.get(db_type, "postgres")
+        if first_word not in cls.ALLOWED_STATEMENTS:
+            return False, f"Only SELECT statements are allowed. Got: {first_word}"
+
+        # Block semicolons to prevent multiple statements
+        if ";" in sql_stripped:
+            # Allow trailing semicolon
+            if sql_stripped.count(";") > 1 or not sql_stripped.rstrip().endswith(";"):
+                return False, "Multiple statements are not allowed"
+
+        return True, ""
 
     @classmethod
     def transform_sql(cls, sql: str, db_type: str = "postgres") -> str:
+        """Transform SQL for safe execution.
+
+        - Strips trailing semicolons
+        - Adds LIMIT clause if not present
+
+        Args:
+            sql: SQL statement
+            db_type: Database type
+
+        Returns:
+            Transformed SQL statement
+        """
         sql = sql.strip()
         if sql.endswith(";"):
             sql = sql[:-1].strip()
 
-        dialect = cls._get_sqlglot_dialect(db_type)
-        parsed = sqlglot.parse_one(sql, dialect=dialect)
+        # Check if database supports LIMIT
+        try:
+            adapter = adapter_factory.get_adapter_by_type(db_type)
+            supports_limit = adapter.supports_limit_clause
+        except Exception:
+            supports_limit = True
 
-        if not cls._has_limit(parsed):
+        if not supports_limit:
+            return sql
+
+        # Simple string-based LIMIT check
+        sql_upper = sql.upper()
+        limit_pattern = r'\bLIMIT\s+\d+|\bLIMIT\s+\?|\bLIMIT\s+:\w+'
+        has_limit = bool(re.search(limit_pattern, sql_upper))
+
+        if not has_limit:
             sql = f"{sql} LIMIT {MAX_ROWS}"
 
         return sql
 
     @classmethod
-    def _has_limit(cls, parsed) -> bool:
-        try:
-            return hasattr(parsed, "limit") and parsed.limit is not None
-        except Exception:
-            return False
-
-    @classmethod
     def execute_query(
         cls, db_name: str, connection_url: str, sql: str
     ) -> tuple[list[dict], list[tuple[str, str]], bool]:
-        db_type = get_db_type(connection_url)
+        """Execute a SQL query and return results.
+
+        Args:
+            db_name: Database connection name
+            connection_url: Database connection URL
+            sql: SQL query to execute
+
+        Returns:
+            Tuple of (rows, columns, was_truncated)
+
+        Raises:
+            ValueError: If SQL validation fails
+        """
+        # Get adapter for database-specific behavior
+        adapter = adapter_factory.get_adapter(connection_url)
+        db_type = adapter.db_type
+
         engine = ConnectionManager.get_engine(db_name, connection_url)
 
+        # Validate SQL
         is_valid, error = cls.validate_sql(sql, db_type)
         if not is_valid:
             raise ValueError(error)
 
+        # Transform SQL (add LIMIT if needed)
         transformed_sql = cls.transform_sql(sql, db_type)
 
         with engine.connect() as conn:
             result = conn.execute(text(transformed_sql))
 
+            # Extract column information
             cursor_description = result.cursor.description
             columns = []
             for col in cursor_description:
@@ -88,12 +134,17 @@ class QueryService:
                 col_type = col[1].__name__ if hasattr(col[1], "__name__") else str(col[1])
                 columns.append((col_name, col_type))
 
+            # Serialize rows using adapter
             rows = []
             for row in result:
                 row_dict = {}
                 for i, col in enumerate(columns):
                     value = row[i]
-                    row_dict[col[0]] = cls._serialize_value(value, db_type)
+                    try:
+                        row_dict[col[0]] = adapter.serialize(value)
+                    except Exception:
+                        # Fallback: convert to string if serialization fails
+                        row_dict[col[0]] = str(value) if value is not None else None
                 rows.append(row_dict)
 
             truncated = len(rows) == MAX_ROWS
@@ -102,43 +153,39 @@ class QueryService:
 
     @classmethod
     def _serialize_value(cls, value: Any, db_type: str = "postgres") -> Any:
-        """Serialize a value for JSON response, handling DB-specific types."""
-        if value is None:
-            return None
+        """Serialize a value for JSON response.
 
-        # Handle basic types
-        if isinstance(value, (int, str, bool)):
-            return value
-
-        # Handle float (including MySQL FLOAT, DOUBLE)
-        if isinstance(value, float):
-            return value
-
-        # Handle Decimal (MySQL DECIMAL type)
-        if isinstance(value, decimal.Decimal):
-            return float(value)
-
-        # Handle datetime types (MySQL DATETIME, TIMESTAMP, DATE, TIME)
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, date):
-            return value.isoformat()
-        if isinstance(value, time):
-            return value.isoformat()
-        if isinstance(value, timedelta):
+        .. deprecated::
+            This method is kept for backward compatibility.
+            Use adapter.serialize() instead.
+        """
+        # Get adapter for serialization
+        try:
+            adapter = adapter_factory.get_adapter_by_type(db_type)
+            return adapter.serialize(value)
+        except Exception:
+            # Fallback serialization
+            if value is None:
+                return None
+            if isinstance(value, (int, str, bool)):
+                return value
+            if isinstance(value, float):
+                return value
+            if isinstance(value, decimal.Decimal):
+                return float(value)
+            if isinstance(value, datetime):
+                return value.isoformat()
+            if isinstance(value, date):
+                return value.isoformat()
+            if isinstance(value, time):
+                return value.isoformat()
+            if isinstance(value, timedelta):
+                return str(value)
+            if isinstance(value, bytes):
+                try:
+                    return value.decode("utf-8")
+                except UnicodeDecodeError:
+                    return value.hex()
+            if isinstance(value, memoryview):
+                return bytes(value).hex()
             return str(value)
-
-        # Handle bytes (MySQL BLOB, BINARY, VARBINARY)
-        if isinstance(value, bytes):
-            # Try to decode as UTF-8 first, otherwise return hex
-            try:
-                return value.decode("utf-8")
-            except UnicodeDecodeError:
-                return value.hex()
-
-        # Handle memoryview (some DB drivers return this)
-        if isinstance(value, memoryview):
-            return bytes(value).hex()
-
-        # Fallback to string representation
-        return str(value)

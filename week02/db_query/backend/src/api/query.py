@@ -1,3 +1,4 @@
+import traceback
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -87,6 +88,9 @@ async def execute_query(
             },
         )
     except Exception as e:
+        # Print full traceback for debugging
+        print(f"Query execution error: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
