@@ -35,6 +35,10 @@ test.db
 # Claude
 .claude/
 
+# venders
+venders/codex/
+
+
 # Python build artifacts
 *.pyc
 *.pyo
