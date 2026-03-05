@@ -21,15 +21,15 @@ git submodule add https://github.com/openai/codex venders/codex
 
 ## 阅读 codex 的 history（演进）
 
-查看 repo 的所有 commit history，梳理其代码变更的脉络，必要时辅以 mermaid chart。 写入 ./specs/w4/codex-changes.md
+查看 codex 项目 repo 的所有 commit history，梳理其代码变更的脉络，必要时辅以 mermaid chart。 写入 ./specs/w4/codex-changes.md
 
 ### 事件循环
 
-
+帮我梳理 codex 代码处理事件循环的部分，详细解读当用户发起一个任务后，codex 是如何分解处理这个任务，并不断自我迭代，最终完成整个任务。这个过程中发生了什么，codex 如何决定任务完成还是未完成需要继续迭代。如果需要，可以用 mermaid chart 来辅助说明。写入 ./specs/w4/codex-event-loop.md
 
 ### 工具调用
 
-
+帮我梳理 codex 代码处理工具调用的部分，详细解读 codex 是如何知道有哪些工具可以调用，如何选择工具，如何调用工具，如何处理工具的返回结果，如何决定工具调用是否成功等等。如果需要，可以用 mermaid chart 来辅助说明。写入 ./specs/w4/codex-tool-call.md
 
 ### 了解 codex 的 apply_patch 工具
 
