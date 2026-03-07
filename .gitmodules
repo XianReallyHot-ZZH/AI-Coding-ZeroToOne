@@ -1,3 +1,6 @@
 [submodule "venders/codex"]
 	path = venders/codex
 	url = https://github.com/openai/codex
+[submodule "venders/open-notebook"]
+	path = venders/open-notebook
+	url = https://github.com/lfnovo/open-notebook

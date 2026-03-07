@@ -39,14 +39,22 @@ git submodule add https://github.com/openai/codex venders/codex
 
 如果我要把 apply_patch 工具集成到我自己的项目中，我需要做哪些工作，如何做等等。如果需要，可以用 mermaid chart 来辅助说明。写入 ./specs/w4/codex-apply-patch-integration.md
 
+## open-notebook 阅读 实践
+
+### 添加 子模块 
+
+git submodule add https://github.com/lfnovo/open-notebook venders/open-notebook
+
 ### open-notebook 架构设计
 
+仔细阅读 ./venders/open-notebook 的代码，撰写一个详细的架构分析文档，如需图表，使用 mermaid chart。文档放在: ./specs/w4/open-notebook-arch-design.md
 
+帮我详细介绍 surrealdb 跟 worker 之间是如何交互的，撰写 ./specs/w4/open-notebook-worker.md
 
 ### open-notebook 如何使用 Surrealdb
 
-
+帮我详细介绍 open-notebook 如何使用 Surrealdb，如何定义存放在 surrealdb 中的数据，如何定义图结构，app 和 surrealdb 如何交互，撰写 ./specs/w4/open-notebook-surrealdb.md
 
 ### podcast 生成
 
-
+帮我详细介绍 open-notebook 如何生成 podcast，如何使用数据库中的数据，如何定义 podcast 的结构，如何生成 podcast，撰写 ./specs/w4/open-notebook-podcast.md
