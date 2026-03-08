@@ -39,10 +39,10 @@
 
 根据 ./specs/w5/001-pg-mcp-prd.md， 在 ./week05/pg-mcp/fixtures 下构建三个有意义的数据库，分别有少量，中等量级，以及大量的 table/view/types/index 等 schema，且有足够多的数据。生成这三个数据库的 sql 文件，并构建 Makefile 来重建这些测试数据库。
 
-然后你来建立和测试这几个数据库确保可用
+根据 ./week05/pg-mcp/fixtures 下的 makefile 文件和 sql 文件，使用本地的 postgres 数据库来构建测试数据库。
 
 ## pg-cmp 完整测试
 
-对于 将 ./week05/pg-mcp 这个插件添加到当前trae项目的项目级MCP中。本地启动 pg-mcp server。
+将 ./week05/pg-mcp 这个插件添加到当前trae项目的项目级MCP中。本地启动 pg-mcp server。
 
 
