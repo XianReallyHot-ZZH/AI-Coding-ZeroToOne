@@ -21,10 +21,15 @@
 
 ## impl plan
 
-根据 ./specs/w5/002-pg-mcp-design.md 文档，构建 pg-mcp 的实现计划，think ultra hard，文档放在 ./specs/w5/003-pg-mcp-impl-plan.md 文件中。pc-mcp 的项目在 ./week05/pg-mcp 目录下。
+根据 ./specs/w5/002-pg-mcp-design.md 文档，构建 pg-mcp 的实现计划，think ultra hard，文档放在 ./specs/w5/003-pg-mcp-impl-plan.md 文件中。
+
+## 拆分 plan
+
+根据 ./specs/w5/003-pg-mcp-impl-plan.md 文档，将实现计划拆分成可执行的详细的特性任务 think ultra hard，文档放在 ./specs/w5/004-pg-mcp-tasks.md 文件中。
 
 ## 实现 pg-mcp
 
+根据 ./specs/w5/004-pg-mcp-tasks.md 文档，实现 pg-mcp 的 phase 1 的全部功能。
 
 
 ## pg-mcp test plan
