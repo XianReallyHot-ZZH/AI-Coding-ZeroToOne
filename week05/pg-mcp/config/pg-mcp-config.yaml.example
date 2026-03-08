@@ -1,0 +1,50 @@
+# PostgreSQL MCP Server 配置文件示例
+# 复制此文件为 pg-mcp-config.yaml 并修改配置
+
+# 数据库配置 - 支持多个数据库连接
+databases:
+  - name: "main_db"                    # 数据库标识名称
+    connection:
+      host: "localhost"                # 数据库主机地址
+      port: 5432                       # 端口号
+      database: "myapp"                # 数据库名称
+      user: "readonly_user"            # 用户名（建议使用只读用户）
+      password: "${DB_PASSWORD}"       # 密码（支持 ${ENV_VAR} 格式的环境变量）
+      sslmode: "prefer"                # SSL 模式: disable, allow, prefer, require, verify-ca, verify-full
+    enabled: true                      # 是否启用此数据库
+
+  - name: "analytics_db"
+    connection:
+      host: "analytics.example.com"
+      port: 5432
+      database: "analytics"
+      user: "reader"
+      password: "${ANALYTICS_DB_PASSWORD}"
+      sslmode: "require"
+    enabled: true
+
+# LLM 配置 - 用于自然语言转 SQL
+llm:
+  provider: "deepseek"                 # LLM 提供商
+  model: "deepseek-chat"               # 模型名称
+  api_key: "${DEEPSEEK_API_KEY}"       # API Key（支持环境变量）
+  base_url: "https://api.deepseek.com/v1"  # API 基础 URL
+  timeout: 30                          # 请求超时时间（秒）
+  max_retries: 3                       # 最大重试次数
+
+# 缓存配置
+cache:
+  schema_ttl: 3600                     # Schema 缓存有效期（秒），0 表示永不过期
+  schema_path: "./cache/schemas"       # Schema 缓存存储路径
+
+# 安全配置
+security:
+  max_result_rows: 1000                # 查询结果最大行数
+  query_timeout: 30                    # 查询超时时间（秒）
+  max_concurrent_queries: 10           # 最大并发查询数
+  allowed_schemas: null                # 允许访问的 schema 列表，null 表示允许所有
+  blocked_tables: null                 # 禁止访问的表列表，null 表示不阻止任何表
+  # blocked_tables:                    # 示例：阻止敏感表
+  #   - "users"
+  #   - "passwords"
+  #   - "secrets"

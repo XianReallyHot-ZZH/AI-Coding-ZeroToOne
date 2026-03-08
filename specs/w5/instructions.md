@@ -29,7 +29,7 @@
 
 ## 实现 pg-mcp
 
-根据 ./specs/w5/004-pg-mcp-tasks.md 文档，实现 pg-mcp 的 phase 1 的全部功能。
+根据 ./specs/w5/004-pg-mcp-tasks.md 文档，实现 pg-mcp 的 phase 1 的全部功能。代码放在 ./week05/pg-mcp 目录下。
 
 
 ## pg-mcp test plan
