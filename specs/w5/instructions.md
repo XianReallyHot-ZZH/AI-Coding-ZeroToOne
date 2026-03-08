@@ -31,15 +31,18 @@
 
 根据 ./specs/w5/004-pg-mcp-tasks.md 文档，实现 pg-mcp 的 phase 1 的全部功能。代码放在 ./week05/pg-mcp 目录下。
 
-
 ## pg-mcp test plan
 
-
+根据 ./specs/w5/003-pg-mcp-impl-plan.md 和 ./specs/w5/002-pg-mcp-design.md 文档，构建 pg-mcp 的测试计划，think ultra hard，文档放在 ./specs/w5/005-pg-mcp-test-plan.md 文件中。
 
 ## 构建 pg-mcp 的测试用例
 
+根据 ./specs/w5/001-pg-mcp-prd.md， 在 ./week05/pg-mcp/fixtures 下构建三个有意义的数据库，分别有少量，中等量级，以及大量的 table/view/types/index 等 schema，且有足够多的数据。生成这三个数据库的 sql 文件，并构建 Makefile 来重建这些测试数据库。
 
+然后你来建立和测试这几个数据库确保可用
 
-## pg-cmp 测试数据库
+## pg-cmp 完整测试
+
+对于 将 ./week05/pg-mcp 这个插件添加到当前trae项目的项目级MCP中。本地启动 pg-mcp server。
 
 
