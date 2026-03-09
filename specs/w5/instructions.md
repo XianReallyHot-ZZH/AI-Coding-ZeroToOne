@@ -41,8 +41,21 @@
 
 根据 ./week05/pg-mcp/fixtures 下的 makefile 文件和 sql 文件，使用本地的 postgres 数据库来构建测试数据库。
 
+## 生成自然语言测试数据集
+
+根据 ./week05/pg-mcp/fixtures 下的 sql 文件，生成自然语言测试数据集，以用来测试 pg-mcp 的功能。测试数据集写入 ./week05/pg-mcp/fixtures/test-querys.md 文件中。
+
+
 ## pg-cmp 完整测试
 
-将 ./week05/pg-mcp 这个插件添加到当前trae项目的项目级MCP中。本地启动 pg-mcp server。
+将 ./week05/pg-mcp 这个插件添加到当前trae项目的项目级MCP中。启动 pg-mcp ，然后在 trae 对话中测试 pg-mcp 的功能。
 
+## 使用 skill 来构建类似的查询
 
+在当前项目下创建一个新的 skill，要求：
+
+1. 首先通过 psql (localhost:5432, 用户：postgres, 密码：123456) 探索这几个数据库：blog_small、ecommerce_medium、saas_crm_large，了解它们都有哪些 table/view/types/index 等等，每个数据库一个 md 文件，作为 skill 的 reference。
+2. 用户可以给特定自然语言描述的查询的需求，skill 根据用户输入找到相应的数据库的 reference 文件，然后根据这些信息以及用户的输入来生成正确的 SQL。SQL只允许查询语句，不能有任何的写操作，不能有任何安全漏洞比如 SQL 注入，不能有任何危险的操作比如 sleep，不能有任何的敏感信息比如 API Key 等。
+3. 使用 psql 测试这个 SQL 确保它能够执行并且返回有意义的结果。如果执行失败，则深度思考，重新生成 SQL，回到第 3 步。
+4. 把用户的输入，生成的 SQL，以及返回的结果的一部分进行分析来确认结果是不是有意义，根据分析打个分数。10分非常 confident，0分非常不 confident。如果小于 7 分，则深度思考，重新生成 SQL，回到第 3 步。
+5. 最后根据用户的输入是返回 SQL 还是返回 SQL 查询之后的结果（默认）来返回相应的内容
