@@ -4,3 +4,6 @@
 [submodule "venders/open-notebook"]
 	path = venders/open-notebook
 	url = https://github.com/lfnovo/open-notebook
+[submodule "venders/opencode"]
+	path = venders/opencode
+	url = https://github.com/anomalyco/opencode
