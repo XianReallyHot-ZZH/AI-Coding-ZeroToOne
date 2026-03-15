@@ -90,4 +90,25 @@ based on ./specs/w6/prompts/codex-prompt.md and ./specs/w6/prompts/opencode-revi
 仔细考虑这些需求，构建一个 solid 的设计文档，文档放在 ./specs/w6/x-codereview-agent-design.md 文件中。design doc 输出中文。不要参考 ./week06/codereview-agent/ 和 ./week06/simple-agent/ 路径下的东西，也不要参考 ./specs/w6/codereview-agent-design.md 文件。
 
 
+## 构建 codereview agent 代码
+
+根据 ./specs/w6/codereview-agent-design.md 文档，构建一个 codereview agent 的代码（使用 ./week06/simple-agent 作为 dependency），代码放在 ./week06/codereview-agent 目录下。代码要完整实现 design spec，符合其要求。实现完成后请根据几个场景运行测试，确保它正常工作。不要参考 ./week06/x-codereview-agent/ 和 ./week06/x-simple-agent/ 路径下的东西，也不要参考 ./specs/w6/x-codereview-agent-design.md 文件。
+
+根据 ./specs/w6/x-codereview-agent-design.md 文档，构建一个 codereview agent 的代码（使用 ./week6/x-simple-agent 作为 dependency），代码放在 ./week06/x-codereview-agent 目录下。代码要完整实现 design spec，符合其要求。实现完成后请根据几个场景运行测试，确保它正常工作。不要参考 ./week06/codereview-agent/ 和 ./week06/simple-agent/ 路径下的东西，也不要参考 ./specs/w6/codereview-agent-design.md 文件。
+
+
+## 支持 deepseek 模型
+
+codereview-agent 实现对 deepseek 模型的支持
+
+
+
+## codex review
+
+使用 codex review skill 对 ./week06/codereview-agent 代码进行 review，确保代码符合 ./specs/w6/codereview-agent-design.md 的设计。将 rewiew 结果写在 ./specs/w6/codereview-agent-review-result.md 文件中。
+
+使用 codex review skill 对 ./week06/x-codereview-agent 代码进行 review，确保代码符合 ./specs/w6/x-codereview-agent-design.md 的设计。将 rewiew 结果写在 ./specs/w6/x-codereview-agent-review-result.md 文件中。 
+
+
+
 

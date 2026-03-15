@@ -1,0 +1,11 @@
+{
+  "name": "week06-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Week 06 Agent experiments",
+  "scripts": {
+    "build": "pnpm -r build"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
