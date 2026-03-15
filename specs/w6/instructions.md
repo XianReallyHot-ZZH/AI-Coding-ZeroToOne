@@ -34,6 +34,12 @@ https://yuyz0112.github.io/claude-code-reverse/visualize.html
 
 ### 实现
 
-基于 ./specs/w6/simple-agent-design.md 的规范，使用 openai 构建一个 agent sdk，提供 agent 的核心功能，用户可以很方便地为 agent 添加自定义工具和 mcp。完成构建后，确保所有实现否符合 design spec，并提供几个 example 来展示如何使用（包含至少一个使用 mcp 的例子）。
+基于 ./specs/w6/simple-agent-design.md 的规范，使用 openai 构建一个 agent sdk，提供 agent 的核心功能，用户可以很方便地为 agent 添加自定义工具和 mcp。完成构建后，确保所有实现否符合 design spec，并提供几个 example 来展示如何使用（包含至少一个使用 mcp 的例子）。代码放在 ./week06/simple-agent 目录下。
+
+基于 ./specs/w6/X001-simple-agent-design.md 的规范，使用 openai 构建一个 agent sdk，提供 agent 的核心功能，用户可以很方便地为 agent 添加自定义工具和 mcp。完成构建后，确保所有实现否符合 design spec，并提供几个 example 来展示如何使用（包含至少一个使用 mcp 的例子）。代码放在 ./week06/x-simple-agent 目录下。
+
+### 改成使用 deepseek
+
+兼容 deepseek 使用
 
 

@@ -1,0 +1,40 @@
+{
+  "name": "x-simple-agent",
+  "version": "1.0.0",
+  "description": "A simple agent SDK with tool calling and MCP support (OpenAI, DeepSeek, etc.)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "example:basic": "tsx examples/basic-usage.ts",
+    "example:custom-tools": "tsx examples/custom-tools.ts",
+    "example:streaming": "tsx examples/streaming.ts",
+    "example:mcp": "tsx examples/mcp-usage.ts",
+    "example:deepseek": "tsx examples/deepseek-usage.ts"
+  },
+  "keywords": [
+    "agent",
+    "llm",
+    "openai",
+    "deepseek",
+    "mcp",
+    "tool-calling"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "openai": "^4.93.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "@types/uuid": "^10.0.0",
+    "dotenv": "^17.3.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

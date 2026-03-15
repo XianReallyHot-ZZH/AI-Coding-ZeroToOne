@@ -1,0 +1,34 @@
+{
+  "name": "simple-agent",
+  "version": "1.0.0",
+  "description": "A simple, extensible agent SDK with tool calling and MCP support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "example:basic": "tsx examples/basic.ts",
+    "example:calculator": "tsx examples/calculator.ts",
+    "example:weather": "tsx examples/weather.ts",
+    "example:mcp": "tsx examples/mcp-example.ts",
+    "example:testing": "tsx examples/testing.ts",
+    "example:deepseek": "tsx examples/deepseek.ts"
+  },
+  "dependencies": {
+    "openai": "^4.77.0",
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.24.3",
+    "@modelcontextprotocol/sdk": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2",
+    "tsx": "^4.19.3"
+  },
+  "keywords": [
+    "agent",
+    "llm",
+    "openai",
+    "mcp",
+    "tool-calling"
+  ]
+}
