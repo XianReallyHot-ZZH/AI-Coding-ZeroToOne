@@ -1,0 +1,37 @@
+{
+  "name": "x-codereview-agent",
+  "version": "1.0.0",
+  "description": "A code review agent based on x-simple-agent SDK",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "codereview": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "lint": "biome check src/"
+  },
+  "keywords": [
+    "code-review",
+    "agent",
+    "llm",
+    "git",
+    "github"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "x-simple-agent": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "dotenv": "^17.3.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.0"
+  }
+}

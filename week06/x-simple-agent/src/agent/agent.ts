@@ -234,7 +234,7 @@ export class Agent {
               // Start accumulating a new tool call
               toolCalls.push({
                 type: "tool_call",
-                id: event.id,
+                id: event.id || `tc_${toolCalls.length}`,
                 name: event.name,
                 arguments: "",
               })
@@ -242,7 +242,12 @@ export class Agent {
 
             case "tool_call_delta":
               // Accumulate tool call arguments
-              const tc = toolCalls.find((t) => t.id === event.id)
+              // When id is empty, use the last tool call
+              let tc = toolCalls.find((t) => t.id === event.id)
+              if (!tc && (!event.id || event.id === "")) {
+                // Fall back to last tool call
+                tc = toolCalls[toolCalls.length - 1]
+              }
               if (tc) {
                 (tc.arguments as string) += event.arguments
               }
@@ -250,7 +255,12 @@ export class Agent {
 
             case "tool_call_end":
               // Parse arguments and emit event
-              const completedTc = toolCalls.find((t) => t.id === event.id)
+              // When id is empty, find by index (last completed tool call)
+              let completedTc = toolCalls.find((t) => t.id === event.id)
+              if (!completedTc && (!event.id || event.id === "")) {
+                // Find the last tool call that hasn't been added to content yet
+                completedTc = toolCalls.filter((t) => !content.includes(t)).pop()
+              }
               if (completedTc) {
                 try {
                   completedTc.arguments = JSON.parse(completedTc.arguments as string)
