@@ -68,7 +68,7 @@ based on ./specs/w6/prompts/codex-prompt.md and ./specs/w6/prompts/opencode-revi
 - 帮我 review commit 13bad5 之后的代码
 - 帮我 review pull request 12 的代码
 
-仔细考虑这些需求，构建一个 solid 的设计文档，文档放在 ./specs/w6/codereview-agent-design.md 文件中。design doc 输出中文。不要参考 ./week06/x-codereview-agent/ 下的东西
+仔细考虑这些需求，构建一个 solid 的设计文档，文档放在 ./specs/w6/codereview-agent-design.md 文件中。design doc 输出中文。不要参考 ./week06/x-codereview-agent/ 和 ./week06/x-simple-agent/ 路径下的东西，也不要参考 ./specs/w6/x-codereview-agent-design.md 文件。
 
 ## 构建 codereview agent design spec 2
 
@@ -87,4 +87,7 @@ based on ./specs/w6/prompts/codex-prompt.md and ./specs/w6/prompts/opencode-revi
 - 帮我 review commit 13bad5 之后的代码
 - 帮我 review pull request 12 的代码
 
-仔细考虑这些需求，构建一个 solid 的设计文档，文档放在 ./specs/w6/x-codereview-agent-design.md 文件中。design doc 输出中文。不要参考 ./week06/codereview-agent/ 和 ./week06/simple-agent/ 下的东西
+仔细考虑这些需求，构建一个 solid 的设计文档，文档放在 ./specs/w6/x-codereview-agent-design.md 文件中。design doc 输出中文。不要参考 ./week06/codereview-agent/ 和 ./week06/simple-agent/ 路径下的东西，也不要参考 ./specs/w6/codereview-agent-design.md 文件。
+
+
+

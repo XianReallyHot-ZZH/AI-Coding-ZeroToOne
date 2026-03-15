@@ -2,893 +2,716 @@
 
 ## 1. 概述
 
-CodeReview Agent 是一个专门用于代码审查的智能代理，能够根据用户的各种需求（分支对比、提交对比、PR 审查等）自动收集代码变更并进行深度分析。
+CodeReview Agent 是一个专门用于代码审查的 AI Agent，能够根据用户的各种需求（分支差异、提交差异、PR 差异等）自动获取代码变更并进行深度分析，提供可操作的改进建议。
 
-### 1.1 设计目标
+### 1.1 核心能力
 
-- **灵活性**：支持多种审查场景（分支、提交、PR、文件等）
-- **准确性**：通过完整读取文件内容理解上下文，而非仅依赖 diff
-- **可扩展性**：基于 simple-agent 框架构建，易于扩展新工具和能力
-- **易用性**：自然语言交互，用户无需记忆复杂命令
+- **多种审查模式**：支持分支对比、提交对比、PR 审查、文件审查等多种场景
+- **上下文感知**：不仅查看 diff，还会读取完整文件内容以理解上下文
+- **智能工具调用**：自动选择合适的 git/gh 命令获取代码差异
+- **规范化输出**：按严重程度分类输出审查结果
 
-### 1.2 核心能力
+### 1.2 技术架构
 
-- 自动解析用户意图，确定审查范围
-- 智能收集代码变更上下文
-- 深度分析代码质量、潜在 bug、安全问题
-- 输出结构化的审查报告
+基于 `simple-agent` 框架构建：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CodeReview Agent                        │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ System Prompt│  │ Tool Registry│  │Conversation Mgr  │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                        Tools                                │
+│  ┌─────────┐ ┌──────────┐ ┌───────────┐ ┌───────────────┐  │
+│  │read_file│ │write_file│ │git_command│ │  gh_command   │  │
+│  └─────────┘ └──────────┘ └───────────┘ └───────────────┘  │
+├─────────────────────────────────────────────────────────────┤
+│                     LLM Provider                            │
+│                  (OpenAI / Anthropic)                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 2. 架构设计
+## 2. 工具定义
 
-### 2.1 整体架构
+### 2.1 read_file 工具
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        CodeReview Agent                         │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐ │
-│  │   System    │    │    Tool     │    │    LLM Provider     │ │
-│  │   Prompt    │───▶│   Registry  │───▶│   (OpenAI/etc)      │ │
-│  └─────────────┘    └─────────────┘    └─────────────────────┘ │
-│         │                  │                      │             │
-│         ▼                  ▼                      ▼             │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                     Agent Core (simple-agent)               ││
-│  │  ┌───────────────┐  ┌───────────────┐  ┌─────────────────┐ ││
-│  │  │ Conversation  │  │    Tool       │  │   Agent Loop    │ ││
-│  │  │   Manager     │  │   Executor    │  │   (Agentic)     │ ││
-│  │  └───────────────┘  └───────────────┘  └─────────────────┘ ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                        Tools Layer                          ││
-│  │  ┌─────────┐  ┌──────────┐  ┌───────────┐  ┌─────────────┐ ││
-│  │  │read_file│  │write_file│  │git_command│  │ gh_command  │ ││
-│  │  └─────────┘  └──────────┘  └───────────┘  └─────────────┘ ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                              │                                  │
-│                              ▼                                  │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                     File System / Git / GitHub CLI          ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 2.2 基于 simple-agent 框架
-
-复用 `week06/simple-agent` 的核心组件：
-
-| 组件 | 来源 | 用途 |
-|------|------|------|
-| `Agent` | `src/agent.ts` | Agent 主循环，处理 LLM 交互和工具调用 |
-| `ToolRegistry` | `src/tool.ts` | 工具注册和管理 |
-| `ToolExecutor` | `src/executor.ts` | 工具执行，带超时控制 |
-| `ConversationManager` | `src/conversation.ts` | 对话历史管理 |
-| `defineTool` | `src/tool.ts` | 工具定义辅助函数 |
-| `OpenAIProvider` | `src/providers/openai.ts` | LLM 提供者 |
-
----
-
-## 3. 工具设计
-
-### 3.1 read_file 工具
-
-读取指定文件的内容，支持相对路径和绝对路径。
-
-**Schema 定义：**
+读取当前工作目录下指定文件的内容。
 
 ```typescript
 const readFileTool = defineTool("read_file", {
-  description: `读取指定文件的内容。
+  description: `读取文件内容。用于获取完整文件内容以理解代码上下文。
 
 使用场景：
-- 读取变更文件的完整内容以理解上下文
-- 查看 AGENTS.md、CLAUDE.md 等项目规范文件
-- 查看相关依赖文件理解代码关系
+- 读取变更文件的完整内容（diff 只显示部分变更）
+- 检查项目规范文件（AGENTS.md, CLAUDE.md, .editorconfig）
+- 理解相关依赖文件
 
-参数说明：
-- path: 文件路径，相对于工作目录或绝对路径
+注意事项：
+- 路径相对于当前工作目录
+- 二进制文件会返回错误
+- 支持文本文件、代码文件、配置文件等`,
 
-返回：文件内容字符串，如果文件不存在则返回错误信息。`,
   parameters: z.object({
-    path: z.string().describe("要读取的文件路径"),
+    path: z.string().describe("文件路径，相对于当前工作目录，如 'src/index.ts'"),
   }),
+
   execute: async (args, context) => {
-    // 实现见后文
-  },
-});
-```
+    const fs = await import("fs/promises");
+    const path = await import("path");
 
-**使用示例（LLM 调用）：**
-
-```json
-{
-  "name": "read_file",
-  "input": {
-    "path": "src/auth/login.ts"
-  }
-}
-```
-
-### 3.2 write_file 工具
-
-写入内容到指定文件，用于生成审查报告或修复建议。
-
-**Schema 定义：**
-
-```typescript
-const writeFileTool = defineTool("write_file", {
-  description: `写入内容到指定文件。
-
-使用场景：
-- 生成代码审查报告
-- 保存修复建议或代码补丁
-- 创建文档记录发现的问题
-
-参数说明：
-- path: 目标文件路径
-- content: 要写入的内容
-
-注意：如果文件已存在，将会被覆盖。`,
-  parameters: z.object({
-    path: z.string().describe("目标文件路径"),
-    content: z.string().describe("要写入的文件内容"),
-  }),
-  execute: async (args, context) => {
-    // 实现见后文
-  },
-});
-```
-
-**使用示例（LLM 调用）：**
-
-```json
-{
-  "name": "write_file",
-  "input": {
-    "path": "code-review-report.md",
-    "content": "# Code Review Report\n\n## Critical Issues\n..."
-  }
-}
-```
-
-### 3.3 git_command 工具
-
-执行 git 命令，智能处理各种 diff 场景。
-
-**Schema 定义：**
-
-```typescript
-const gitCommandTool = defineTool("git_command", {
-  description: `执行 git 命令获取代码仓库信息。
-
-常用命令场景：
-
-1. 查看工作区状态：
-   - git status --short          # 查看变更文件列表
-   - git status                  # 详细状态
-
-2. 查看 diff：
-   - git diff                    # 未暂存的变更
-   - git diff --cached           # 已暂存的变更
-   - git diff HEAD               # 所有未提交的变更
-   - git diff <branch>...HEAD    # 当前分支相对于某分支的变更
-   - git diff <commit1>..<commit2>  # 两个提交之间的差异
-   - git diff <commit>^..<commit>   # 某个提交引入的变更
-
-3. 查看提交信息：
-   - git log --oneline -n 20     # 最近20条提交
-   - git show <commit>           # 查看某个提交的详细内容
-   - git show <commit> --stat    # 查看提交的文件变更统计
-
-4. 分支信息：
-   - git branch -a               # 所有分支
-   - git branch --show-current   # 当前分支名
-   - git rev-parse HEAD          # 当前提交哈希
-   - git merge-base <branch> HEAD  # 与某分支的共同祖先
-
-5. 文件历史：
-   - git log -p <file>           # 文件的提交历史和变更
-   - git blame <file>            # 文件每行的最后修改信息
-
-参数说明：
-- args: git 命令参数数组，例如 ["status", "--short"]
-- cwd: 可选，指定工作目录，默认为当前工作目录
-
-返回：命令的标准输出，如果失败则返回错误信息。`,
-  parameters: z.object({
-    args: z.array(z.string()).describe("git 命令参数（不含 'git' 本身）"),
-    cwd: z.string().optional().describe("工作目录，默认为当前目录"),
-  }),
-  execute: async (args, context) => {
-    // 实现见后文
-  },
-});
-```
-
-**使用示例（LLM 调用）：**
-
-```json
-// 查看当前分支相对于 main 的变更
-{
-  "name": "git_command",
-  "input": {
-    "args": ["diff", "main...HEAD"]
-  }
-}
-
-// 查看某个提交之后的所有变更
-{
-  "name": "git_command",
-  "input": {
-    "args": ["diff", "13bad5..HEAD"]
-  }
-}
-
-// 查看某个 PR 的变更
-{
-  "name": "git_command",
-  "input": {
-    "args": ["diff", "origin/pr/12...HEAD"]
-  }
-}
-```
-
-### 3.4 gh_command 工具
-
-执行 GitHub CLI (gh) 命令，获取 PR 信息。
-
-**Schema 定义：**
-
-```typescript
-const ghCommandTool = defineTool("gh_command", {
-  description: `执行 GitHub CLI (gh) 命令获取 PR 和仓库信息。
-
-常用命令场景：
-
-1. 查看 PR 信息：
-   - gh pr view <number>         # 查看 PR 详情
-   - gh pr view <number> --json title,body,author,state,files
-   - gh pr list                  # 列出 PR
-
-2. 查看 PR diff：
-   - gh pr diff <number>         # 查看 PR 的代码变更
-   - gh pr diff <number> --name-only  # 仅显示变更文件名
-
-3. PR 评论和审查：
-   - gh pr view <number> --comments  # 查看 PR 评论
-   - gh api repos/:owner/:repo/pulls/:number/reviews
-
-4. 仓库信息：
-   - gh repo view                # 查看当前仓库信息
-   - gh repo view --json name,owner
-
-参数说明：
-- args: gh 命令参数数组，例如 ["pr", "view", "12"]
-- cwd: 可选，指定工作目录
-
-返回：命令的标准输出，如果失败则返回错误信息。`,
-  parameters: z.object({
-    args: z.array(z.string()).describe("gh 命令参数（不含 'gh' 本身）"),
-    cwd: z.string().optional().describe("工作目录，默认为当前目录"),
-  }),
-  execute: async (args, context) => {
-    // 实现见后文
-  },
-});
-```
-
-**使用示例（LLM 调用）：**
-
-```json
-// 查看 PR #12 的详情
-{
-  "name": "gh_command",
-  "input": {
-    "args": ["pr", "view", "12"]
-  }
-}
-
-// 获取 PR #12 的 diff
-{
-  "name": "gh_command",
-  "input": {
-    "args": ["pr", "diff", "12"]
-  }
-}
-
-// 获取 PR 的结构化信息
-{
-  "name": "gh_command",
-  "input": {
-    "args": ["pr", "view", "12", "--json", "title,body,author,files,additions,deletions"]
-  }
-}
-```
-
----
-
-## 4. System Prompt 设计
-
-System Prompt 是 CodeReview Agent 的核心，指导 LLM 如何理解用户意图并执行审查。详见 `./week06/codereview-agent/prompts/system.md`。
-
-### 4.1 输入解析策略
-
-Agent 需要智能解析用户的自然语言输入：
-
-| 用户输入示例 | 解析结果 | 执行策略 |
-|-------------|---------|---------|
-| "帮我 review 当前分支新代码" | 分支对比 | `git diff main...HEAD` (假设 main 是主分支) |
-| "review 一下" | 默认 | `git status` + `git diff HEAD` |
-| "review commit 13bad5 之后的代码" | 提交范围 | `git diff 13bad5..HEAD` |
-| "review pull request 12" | PR 审查 | `gh pr view 12` + `gh pr diff 12` |
-| "review src/auth/login.ts" | 文件审查 | 直接读取文件内容 |
-| "review 最近3个提交" | 提交序列 | `git log -3 --oneline` + 逐个 `git show` |
-
-### 4.2 智能分支检测
-
-当用户说"当前分支新代码"时，Agent 需要自动检测主分支：
-
-```
-1. 获取当前分支名: git branch --show-current
-2. 尝试找主分支: git remote show origin (查找 HEAD branch)
-3. 常见主分支名: main, master, develop
-4. 执行对比: git diff <main-branch>...HEAD
-```
-
-### 4.3 上下文收集流程
-
-```
-1. git status --short      → 识别变更文件
-2. git diff <range>        → 理解变更内容
-3. read_file (每个变更文件) → 获取完整上下文
-4. 检查 AGENTS.md/CLAUDE.md → 获取项目规范
-5. 必要时 git log/git blame → 理解历史上下文
-```
-
----
-
-## 5. 用户交互场景
-
-### 5.1 场景一：Review 当前分支新代码
-
-**用户输入：**
-```
-帮我 review 当前分支新代码
-```
-
-**Agent 执行流程：**
-
-```
-1. [git_command] git branch --show-current
-   → 获取当前分支名 (如: feature/auth)
-
-2. [git_command] git remote show origin
-   → 确定主分支 (如: main)
-
-3. [git_command] git diff main...HEAD --stat
-   → 查看变更文件统计
-
-4. [git_command] git diff main...HEAD
-   → 获取详细 diff
-
-5. [read_file] 读取每个变更文件的完整内容
-   → src/auth/login.ts
-   → src/auth/middleware.ts
-   → src/types/auth.ts
-
-6. [read_file] 检查项目规范
-   → AGENTS.md (如果存在)
-   → CLAUDE.md (如果存在)
-
-7. 分析并输出审查报告
-```
-
-### 5.2 场景二：Review 某个提交之后的代码
-
-**用户输入：**
-```
-帮我 review commit 13bad5 之后的代码
-```
-
-**Agent 执行流程：**
-
-```
-1. [git_command] git log --oneline 13bad5..HEAD
-   → 列出该提交之后的所有提交
-
-2. [git_command] git diff 13bad5..HEAD --stat
-   → 查看变更文件统计
-
-3. [git_command] git diff 13bad5..HEAD
-   → 获取详细 diff
-
-4. [read_file] 读取变更文件的完整内容
-
-5. 分析并输出审查报告
-```
-
-### 5.3 场景三：Review Pull Request
-
-**用户输入：**
-```
-帮我 review pull request 12
-```
-
-**Agent 执行流程：**
-
-```
-1. [gh_command] gh pr view 12 --json title,body,author,baseRefName,headRefName,files
-   → 获取 PR 元信息
-
-2. [gh_command] gh pr diff 12
-   → 获取 PR 的代码变更
-
-3. [git_command] git fetch origin pull/12/head:pr-12
-   → (可选) 获取 PR 分支到本地
-
-4. [read_file] 读取变更文件的完整内容
-
-5. [gh_command] gh pr view 12 --comments
-   → 查看现有评论，避免重复
-
-6. 分析并输出审查报告
-```
-
----
-
-## 6. 实现计划
-
-### 6.1 目录结构
-
-```
-week06/codereview-agent/
-├── src/
-│   ├── index.ts              # 入口，导出公共 API
-│   ├── agent.ts              # CodeReviewAgent 类
-│   ├── tools/
-│   │   ├── index.ts          # 工具导出
-│   │   ├── read-file.ts      # read_file 工具
-│   │   ├── write-file.ts     # write_file 工具
-│   │   ├── git-command.ts    # git_command 工具
-│   │   └── gh-command.ts     # gh_command 工具
-│   └── utils/
-│       ├── git.ts            # Git 相关工具函数
-│       └── fs.ts             # 文件系统工具函数
-├── prompts/
-│   └── system.md             # System Prompt
-├── examples/
-│   ├── review-branch.ts      # 分支审查示例
-│   ├── review-commit.ts      # 提交审查示例
-│   └── review-pr.ts          # PR 审查示例
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
-### 6.2 核心实现
-
-#### 6.2.1 工具实现
-
-**read_file 工具：**
-
-```typescript
-import { defineTool } from "../../simple-agent/src/tool.js";
-import { z } from "zod";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-
-export const readFileTool = defineTool("read_file", {
-  description: `读取指定文件的内容。
-
-使用场景：
-- 读取变更文件的完整内容以理解上下文
-- 查看 AGENTS.md、CLAUDE.md 等项目规范文件
-- 查看相关依赖文件理解代码关系
-
-参数说明：
-- path: 文件路径，相对于工作目录或绝对路径
-
-返回：文件内容字符串，如果文件不存在则返回错误信息。`,
-  parameters: z.object({
-    path: z.string().describe("要读取的文件路径"),
-  }),
-  execute: async (args, context) => {
     try {
-      const absolutePath = resolve(args.path);
-      const content = await readFile(absolutePath, "utf-8");
+      const fullPath = path.resolve(process.cwd(), args.path);
+      const content = await fs.readFile(fullPath, "utf-8");
+
       return {
-        title: `File: ${args.path}`,
+        title: args.path,
         output: content,
-        metadata: { path: absolutePath },
-      };
-    } catch (error) {
-      return {
-        title: `Error reading file: ${args.path}`,
-        output: "",
         metadata: {
-          error: error instanceof Error ? error.message : String(error),
+          path: args.path,
+          size: content.length,
         },
       };
+    } catch (error) {
+      throw new Error(`Failed to read file '${args.path}': ${error instanceof Error ? error.message : String(error)}`);
     }
   },
 });
 ```
 
-**git_command 工具：**
+**调用示例：**
+```json
+{
+  "name": "read_file",
+  "arguments": {
+    "path": "src/auth/login.ts"
+  }
+}
+```
+
+**返回示例：**
+```json
+{
+  "title": "src/auth/login.ts",
+  "output": "// 文件内容...",
+  "metadata": {
+    "path": "src/auth/login.ts",
+    "size": 1234
+  }
+}
+```
+
+---
+
+### 2.2 write_file 工具
+
+写入内容到当前工作目录下的指定文件。
 
 ```typescript
-import { defineTool } from "../../simple-agent/src/tool.js";
-import { z } from "zod";
-import { spawn } from "node:child_process";
+const writeFileTool = defineTool("write_file", {
+  description: `写入内容到文件。用于创建审查报告或修复建议。
 
-export const gitCommandTool = defineTool("git_command", {
-  description: `执行 git 命令获取代码仓库信息。
+使用场景：
+- 生成审查报告文件
+- 创建修复补丁文件
+- 记录审查结果
 
-常用命令场景：
+注意事项：
+- 会覆盖已存在的文件
+- 路径必须相对于当前工作目录
+- 需要确保父目录存在`,
 
-1. 查看工作区状态：
-   - git status --short          # 查看变更文件列表
-
-2. 查看 diff：
-   - git diff                    # 未暂存的变更
-   - git diff --cached           # 已暂存的变更
-   - git diff <branch>...HEAD    # 当前分支相对于某分支的变更
-   - git diff <commit1>..<commit2>  # 两个提交之间的差异
-
-3. 查看提交信息：
-   - git log --oneline -n 20     # 最近20条提交
-   - git show <commit>           # 查看某个提交的详细内容
-
-4. 分支信息：
-   - git branch -a               # 所有分支
-   - git branch --show-current   # 当前分支名
-
-参数说明：
-- args: git 命令参数数组，例如 ["status", "--short"]
-- cwd: 可选，指定工作目录
-
-返回：命令的标准输出。`,
   parameters: z.object({
-    args: z.array(z.string()).describe("git 命令参数"),
-    cwd: z.string().optional().describe("工作目录"),
+    path: z.string().describe("文件路径，相对于当前工作目录"),
+    content: z.string().describe("要写入的文件内容"),
   }),
+
   execute: async (args, context) => {
-    return new Promise((resolve) => {
-      const proc = spawn("git", args.args, {
-        cwd: args.cwd || process.cwd(),
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+    const fs = await import("fs/promises");
+    const path = await import("path");
 
-      let stdout = "";
-      let stderr = "";
+    try {
+      const fullPath = path.resolve(process.cwd(), args.path);
+      const dir = path.dirname(fullPath);
 
-      proc.stdout.on("data", (data) => {
-        stdout += data.toString();
-      });
+      // 确保目录存在
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(fullPath, args.content, "utf-8");
 
-      proc.stderr.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      proc.on("close", (code) => {
-        if (code === 0) {
-          resolve({
-            title: `git ${args.args.join(" ")}`,
-            output: stdout || "(no output)",
-          });
-        } else {
-          resolve({
-            title: `git ${args.args.join(" ")} (failed)`,
-            output: stderr || `Exit code: ${code}`,
-            metadata: { exitCode: code, error: stderr },
-          });
-        }
-      });
-    });
+      return {
+        title: args.path,
+        output: `Successfully wrote ${args.content.length} bytes to ${args.path}`,
+        metadata: {
+          path: args.path,
+          size: args.content.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Failed to write file '${args.path}': ${error instanceof Error ? error.message : String(error)}`);
+    }
   },
 });
 ```
 
-**gh_command 工具：**
+**调用示例：**
+```json
+{
+  "name": "write_file",
+  "arguments": {
+    "path": "review-report.md",
+    "content": "# 代码审查报告\n\n## 发现的问题\n..."
+  }
+}
+```
+
+---
+
+### 2.3 git_command 工具
+
+执行 git 命令，获取代码差异和仓库状态。
 
 ```typescript
-import { defineTool } from "../../simple-agent/src/tool.js";
-import { z } from "zod";
-import { spawn } from "node:child_process";
+const gitCommandTool = defineTool("git", {
+  description: `执行 git 命令。用于获取代码变更、差异、历史等信息。
 
-export const ghCommandTool = defineTool("gh_command", {
-  description: `执行 GitHub CLI (gh) 命令获取 PR 和仓库信息。
+## 常用命令速查
 
-常用命令场景：
+### 获取变更状态
+- \`git status --short\` - 查看简短状态（变更文件列表）
+- \`git status\` - 查看完整状态
 
-1. 查看 PR 信息：
-   - gh pr view <number>         # 查看 PR 详情
-   - gh pr view <number> --json title,body,author
+### 获取差异
+- \`git diff\` - 未暂存的变更
+- \`git diff --cached\` 或 \`git diff --staged\` - 已暂存但未提交的变更
+- \`git diff HEAD\` - 所有未提交的变更（暂存+未暂存）
+- \`git diff <commit>\` - 与指定提交的差异
+- \`git diff <commit1>..<commit2>\` - 两个提交之间的差异
+- \`git diff <branch1>...<branch2>\` - 两个分支之间的差异（三点表示法只显示分支分叉后的变更）
+- \`git diff <branch1>..<branch2>\` - 两个分支之间的差异（两点表示法显示所有差异）
 
-2. 查看 PR diff：
-   - gh pr diff <number>         # 查看 PR 的代码变更
+### 获取提交信息
+- \`git log --oneline -n 20\` - 最近20条提交（简洁格式）
+- \`git log -1 --format="%H %s"\` - 最新提交的hash和消息
+- \`git show <commit>\` - 查看指定提交的详细变更
+- \`git show <commit> --stat\` - 查看提交的文件变更统计
 
-3. PR 评论：
-   - gh pr view <number> --comments
+### 分支操作
+- \`git branch -a\` - 列出所有分支
+- \`git branch --show-current\` - 显示当前分支名
+- \`git rev-parse HEAD\` - 获取当前提交的完整hash
 
-参数说明：
-- args: gh 命令参数数组
-- cwd: 可选，工作目录
+### 其他有用命令
+- \`git blame <file>\` - 查看文件每行的修改历史
+- \`git log -p <file>\` - 查看文件的变更历史
 
-返回：命令的标准输出。`,
+## 命令选择指南
+
+| 用户需求 | 推荐命令 |
+|---------|---------|
+| 审查当前分支新代码 | \`git diff main...HEAD\` |
+| 审查未提交的变更 | \`git diff HEAD\` |
+| 审查某个提交 | \`git show <commit>\` |
+| 审查某个提交之后的所有变更 | \`git diff <commit>..HEAD\` |
+| 审查两个提交之间的变更 | \`git diff <commit1>..<commit2>\` |
+| 审查PR变更 | \`git diff main...HEAD\` (假设main是目标分支)`,
+
   parameters: z.object({
-    args: z.array(z.string()).describe("gh 命令参数"),
-    cwd: z.string().optional().describe("工作目录"),
+    command: z.string().describe("git 命令（不包含 'git' 前缀），如 'diff main...HEAD'"),
   }),
+
   execute: async (args, context) => {
-    return new Promise((resolve) => {
-      const proc = spawn("gh", args.args, {
-        cwd: args.cwd || process.cwd(),
-        stdio: ["ignore", "pipe", "pipe"],
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    try {
+      const { stdout, stderr } = await execAsync(`git ${args.command}`, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large diffs
+        cwd: process.cwd(),
       });
 
-      let stdout = "";
-      let stderr = "";
+      if (stderr && !stdout) {
+        throw new Error(stderr);
+      }
 
-      proc.stdout.on("data", (data) => {
-        stdout += data.toString();
-      });
-
-      proc.stderr.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      proc.on("close", (code) => {
-        if (code === 0) {
-          resolve({
-            title: `gh ${args.args.join(" ")}`,
-            output: stdout || "(no output)",
-          });
-        } else {
-          resolve({
-            title: `gh ${args.args.join(" ")} (failed)`,
-            output: stderr || `Exit code: ${code}`,
-            metadata: { exitCode: code, error: stderr },
-          });
-        }
-      });
-    });
+      return {
+        title: `git ${args.command}`,
+        output: stdout || "(no output)",
+        metadata: {
+          command: args.command,
+          exitCode: 0,
+        },
+      };
+    } catch (error) {
+      const execError = error as { stdout?: string; stderr?: string; message?: string };
+      // git 有时会在 stderr 输出内容但返回码为0
+      if (execError.stdout) {
+        return {
+          title: `git ${args.command}`,
+          output: execError.stdout,
+          metadata: {
+            command: args.command,
+            warning: execError.stderr,
+          },
+        };
+      }
+      throw new Error(`git ${args.command} failed: ${execError.stderr || execError.message}`);
+    }
   },
 });
 ```
 
-#### 6.2.2 CodeReviewAgent 类
+**调用示例：**
+```json
+{
+  "name": "git",
+  "arguments": {
+    "command": "diff main...HEAD"
+  }
+}
+```
+
+**返回示例：**
+```json
+{
+  "title": "git diff main...HEAD",
+  "output": "diff --git a/src/index.ts b/src/index.ts\n...",
+  "metadata": {
+    "command": "diff main...HEAD",
+    "exitCode": 0
+  }
+}
+```
+
+---
+
+### 2.4 gh_command 工具
+
+执行 GitHub CLI (gh) 命令，获取 PR 信息和 GitHub 相关数据。
 
 ```typescript
-import { Agent, AgentConfig, ToolRegistry, ConversationManager } from "../../simple-agent/src/index.js";
+const ghCommandTool = defineTool("gh", {
+  description: `执行 GitHub CLI (gh) 命令。用于获取 Pull Request 信息、查看 PR 差异等。
+
+## 前提条件
+- 需要安装 GitHub CLI: https://cli.github.com/
+- 需要先登录: \`gh auth login\`
+- 当前目录必须是 GitHub 仓库
+
+## 常用命令速查
+
+### PR 相关
+- \`gh pr list\` - 列出 PR
+- \`gh pr list --state open\` - 列出打开的 PR
+- \`gh pr view <number>\` - 查看 PR 详情
+- \`gh pr view <number> --json title,body,author,headRefName,baseRefName\` - 获取 PR 元数据
+- \`gh pr diff <number>\` - 查看 PR 的代码差异
+- \`gh pr diff <number> --patch\` - 以 patch 格式查看差异
+
+### Issue 相关
+- \`gh issue view <number>\` - 查看 Issue 详情
+
+### 仓库相关
+- \`gh repo view\` - 查看当前仓库信息
+- \`gh repo view --json name,owner\` - 获取仓库名和所有者
+
+## 审查 PR 的工作流程
+
+1. 先用 \`gh pr view <number> --json title,body,author,headRefName,baseRefName\` 获取 PR 信息
+2. 再用 \`gh pr diff <number>\` 获取代码差异
+3. 分析差异并用 read_file 读取相关完整文件
+4. 输出审查结果`,
+
+  parameters: z.object({
+    command: z.string().describe("gh 命令（不包含 'gh' 前缀），如 'pr view 123'"),
+  }),
+
+  execute: async (args, context) => {
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    try {
+      const { stdout, stderr } = await execAsync(`gh ${args.command}`, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        cwd: process.cwd(),
+      });
+
+      return {
+        title: `gh ${args.command}`,
+        output: stdout || "(no output)",
+        metadata: {
+          command: args.command,
+          exitCode: 0,
+        },
+      };
+    } catch (error) {
+      const execError = error as { stderr?: string; message?: string };
+      throw new Error(`gh ${args.command} failed: ${execError.stderr || execError.message}`);
+    }
+  },
+});
+```
+
+**调用示例：**
+```json
+{
+  "name": "gh",
+  "arguments": {
+    "command": "pr diff 12"
+  }
+}
+```
+
+---
+
+## 3. System Prompt 设计
+
+System Prompt 是 CodeReview Agent 的核心，需要指导 LLM 如何：
+
+1. 解析用户输入，确定审查类型
+2. 选择正确的工具和命令
+3. 执行审查流程
+4. 输出规范化结果
+
+详见 `./week06/codereview-agent/prompts/system.md`，核心要点：
+
+### 3.1 输入解析
+
+Agent 需要理解用户的自然语言请求，并转换为具体的审查操作：
+
+| 用户请求示例 | 审查类型 | 推荐操作 |
+|------------|---------|---------|
+| "帮我 review 当前分支新代码" | 分支对比 | `git diff main...HEAD` |
+| "review commit 13bad5 之后的代码" | 提交范围 | `git diff 13bad5..HEAD` |
+| "review pull request 12" | PR 审查 | `gh pr diff 12` |
+| "review 最后一个 commit" | 单次提交 | `git show HEAD` |
+| "review staged changes" | 暂存变更 | `git diff --cached` |
+| "review 所有未提交的变更" | 工作区变更 | `git diff HEAD` |
+
+### 3.2 审查工作流
+
+```
+1. 解析用户请求 → 确定审查类型
+       ↓
+2. 执行 git/gh 命令 → 获取代码差异
+       ↓
+3. 识别变更文件列表
+       ↓
+4. 读取完整文件内容（不只是 diff）
+       ↓
+5. 检查项目规范文件（AGENTS.md 等）
+       ↓
+6. 深度分析代码
+       ↓
+7. 输出结构化审查报告
+```
+
+---
+
+## 4. 用户交互设计
+
+### 4.1 CLI 入口
+
+```typescript
+// codereview-agent/src/cli.ts
+import { Command } from "commander";
+
+const program = new Command();
+
+program
+  .name("codereview")
+  .description("AI-powered code review agent")
+  .version("1.0.0")
+  .argument("[target]", "审查目标（分支名、提交hash、PR号等）")
+  .option("-b, --base <branch>", "基准分支，默认为主分支")
+  .option("-o, --output <file>", "输出报告到文件")
+  .option("--json", "以 JSON 格式输出")
+  .action(async (target, options) => {
+    // 运行 agent
+  });
+
+program.parse();
+```
+
+### 4.2 使用示例
+
+```bash
+# 审查当前分支相对于 main 的新代码
+codereview
+
+# 审查当前分支相对于 develop 的新代码
+codereview --base develop
+
+# 审查特定提交之后的所有变更
+codereview "13bad5..HEAD"
+
+# 审查特定 PR
+codereview "pr:12"
+
+# 审查特定文件
+codereview "src/auth/*.ts"
+
+# 输出报告到文件
+codereview -o review-report.md
+```
+
+### 4.3 自然语言交互
+
+用户可以直接用自然语言描述需求：
+
+```
+用户: 帮我 review 当前分支新代码
+Agent: 我将审查当前分支相对于 main 分支的变更...
+       [执行 git diff main...HEAD]
+       [读取相关文件]
+       [输出审查结果]
+
+用户: 帮我 review commit 13bad5 之后的代码
+Agent: 我将审查从提交 13bad5 之后的所有变更...
+       [执行 git diff 13bad5..HEAD]
+       ...
+
+用户: 帮我 review pull request 12 的代码
+Agent: 我将获取 PR #12 的信息并进行审查...
+       [执行 gh pr view 12 --json ...]
+       [执行 gh pr diff 12]
+       ...
+```
+
+---
+
+## 5. 实现细节
+
+### 5.1 项目结构
+
+```
+week06/codereview-agent/
+├── src/
+│   ├── index.ts              # 导出入口
+│   ├── cli.ts                # CLI 入口
+│   ├── agent.ts              # Agent 实例创建
+│   ├── tools/
+│   │   ├── index.ts          # 工具导出
+│   │   ├── read-file.ts      # read_file 工具
+│   │   ├── write-file.ts     # write_file 工具
+│   │   ├── git.ts            # git 工具
+│   │   └── gh.ts             # gh 工具
+│   └── utils/
+│       └── diff-parser.ts    # diff 解析工具
+├── prompts/
+│   └── system.md             # System Prompt
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+### 5.2 Agent 创建
+
+```typescript
+// src/agent.ts
+import { Agent } from "../simple-agent/src/agent.js";
+import { OpenAIProvider } from "../simple-agent/src/providers/openai.js";
+import { ToolRegistry } from "../simple-agent/src/tool.js";
 import { readFileTool } from "./tools/read-file.js";
 import { writeFileTool } from "./tools/write-file.js";
-import { gitCommandTool } from "./tools/git-command.js";
-import { ghCommandTool } from "./tools/gh-command.js";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { gitCommandTool } from "./tools/git.js";
+import { ghCommandTool } from "./tools/gh.js";
+import { readFileSync } from "fs";
 
-export interface CodeReviewAgentConfig {
-  provider: AgentConfig["provider"];
-  maxSteps?: number;
-  temperature?: number;
-  workingDirectory?: string;
-  onTextDelta?: (text: string) => void;
-  onToolCall?: (tool: string, input: unknown) => void;
-  onToolResult?: (tool: string, result: any) => void;
-}
+export function createCodeReviewAgent(config: {
+  apiKey?: string;
+  model?: string;
+}) {
+  // 加载 system prompt
+  const systemPrompt = readFileSync(
+    new URL("../prompts/system.md", import.meta.url),
+    "utf-8"
+  );
 
-export class CodeReviewAgent {
-  private agent: Agent;
-  private toolRegistry: ToolRegistry;
-  private conversation: ConversationManager;
-  private systemPrompt: string;
+  // 创建 provider
+  const provider = new OpenAIProvider({
+    apiKey: config.apiKey,
+    model: config.model || "gpt-4o",
+  });
 
-  constructor(config: CodeReviewAgentConfig) {
-    // 加载 system prompt
-    this.systemPrompt = this.loadSystemPrompt();
+  // 注册工具
+  const toolRegistry = new ToolRegistry();
+  toolRegistry.register(readFileTool);
+  toolRegistry.register(writeFileTool);
+  toolRegistry.register(gitCommandTool);
+  toolRegistry.register(ghCommandTool);
 
-    // 创建工具注册表
-    this.toolRegistry = new ToolRegistry();
-    this.toolRegistry.register(readFileTool);
-    this.toolRegistry.register(writeFileTool);
-    this.toolRegistry.register(gitCommandTool);
-    this.toolRegistry.register(ghCommandTool);
-
-    // 创建对话管理器
-    this.conversation = new ConversationManager();
-
-    // 创建 agent
-    this.agent = new Agent(
-      {
-        provider: config.provider,
-        maxSteps: config.maxSteps || 50,
-        systemPrompt: this.systemPrompt,
-        temperature: config.temperature || 0.3,
-        toolTimeout: 30000,
-        onTextDelta: config.onTextDelta,
-        onToolCall: config.onToolCall,
-        onToolResult: config.onToolResult,
+  // 创建 agent
+  return new Agent(
+    {
+      provider,
+      maxSteps: 50, // 代码审查可能需要多轮工具调用
+      systemPrompt,
+      temperature: 0.3, // 较低温度保证稳定输出
+      toolTimeout: 60000, // git 命令可能较慢
+      onTextDelta: (text) => process.stdout.write(text),
+      onToolCall: (tool, input) => {
+        console.log(`\n[调用工具: ${tool}]`);
+        console.log(`  参数: ${JSON.stringify(input)}`);
       },
-      this.toolRegistry,
-      this.conversation
-    );
-  }
-
-  private loadSystemPrompt(): string {
-    const promptPath = resolve(import.meta.dirname, "../prompts/system.md");
-    return readFileSync(promptPath, "utf-8");
-  }
-
-  async review(input: string, abortSignal?: AbortSignal) {
-    return this.agent.run(input, abortSignal);
-  }
-
-  getConversation() {
-    return this.conversation;
-  }
-
-  clearConversation() {
-    this.conversation.clear();
-  }
+      onToolResult: (tool, result) => {
+        console.log(`  结果: ${result.output.slice(0, 100)}...`);
+      },
+    },
+    toolRegistry
+  );
 }
+```
 
-// 工厂函数
-export function createCodeReviewAgent(config: CodeReviewAgentConfig) {
-  return new CodeReviewAgent(config);
+### 5.3 主分支检测
+
+```typescript
+// src/utils/detect-main-branch.ts
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
+
+export async function detectMainBranch(): Promise<string> {
+  const candidates = ["main", "master", "develop", "staging"];
+
+  for (const branch of candidates) {
+    try {
+      await execAsync(`git rev-parse --verify ${branch}`);
+      return branch;
+    } catch {
+      continue;
+    }
+  }
+
+  // 默认返回 main
+  return "main";
 }
 ```
 
 ---
 
-## 7. System Prompt 工具说明更新
+## 6. System Prompt 更新建议
 
-需要在 `./week06/codereview-agent/prompts/system.md` 中更新工具说明部分，添加详细的工具使用示例：
+需要更新 `./week06/codereview-agent/prompts/system.md`，在 "Tools Available" 部分添加更详细的使用指南：
+
+### 6.1 工具选择决策树
 
 ```markdown
-## Tools Available
+## 工具选择指南
 
-You have access to the following tools:
+### 确定审查类型
+
+1. **用户提到 "PR" 或 "pull request"**
+   - 使用 `gh pr view <number>` 获取 PR 信息
+   - 使用 `gh pr diff <number>` 获取代码差异
+
+2. **用户提供提交 hash 或 "commit"**
+   - 单个提交: `git show <hash>`
+   - 提交之后: `git diff <hash>..HEAD`
+   - 提交范围: `git diff <hash1>..<hash2>`
+
+3. **用户提到 "branch" 或 "分支"**
+   - 使用 `git diff <base-branch>...HEAD`
+   - 先用 `git branch --show-current` 确认当前分支
+
+4. **用户提到 "staged" 或 "暂存"**
+   - 使用 `git diff --cached`
+
+5. **没有明确指定（默认）**
+   - 先运行 `git status --short` 查看状态
+   - 如果有暂存/未暂存变更，运行 `git diff HEAD`
+   - 如果工作区干净，比较当前分支与主分支
+```
+
+### 6.2 工具调用最佳实践
+
+```markdown
+## 工具调用最佳实践
+
+### git 命令
+
+1. **总是先用 `git status --short` 了解当前状态**
+2. **使用三点表示法 `...` 进行分支比较**
+   - `git diff main...HEAD` 只显示分支分叉后的变更
+   - `git diff main..HEAD` 显示所有差异（包括 main 上的新提交）
+3. **对于大型 diff，考虑使用 `--stat` 先查看文件列表**
+4. **使用 `git log --oneline -n 10` 了解最近的提交历史**
+
+### gh 命令
+
+1. **先用 `--json` 获取 PR 元数据**
+2. **再用 `gh pr diff` 获取代码差异**
+3. **注意 PR 可能来自 fork，需要正确处理**
 
 ### read_file
-Read the contents of any file in the repository.
-```
-read_file(path: string) -> { title: string, output: string }
-```
 
-**Parameters:**
-- `path` (string): The file path to read, can be relative or absolute
-
-**Examples:**
-```json
-{"name": "read_file", "input": {"path": "src/auth/login.ts"}}
-{"name": "read_file", "input": {"path": "AGENTS.md"}}
-```
-
-**Use cases:**
-- Read full file contents for context after seeing a diff
-- Check for AGENTS.md, CLAUDE.md, or other convention files
-- Understand related code and dependencies
-
-### write_file
-Write content to a file in the repository.
-```
-write_file(path: string, content: string) -> { title: string, output: string }
-```
-
-**Parameters:**
-- `path` (string): The target file path
-- `content` (string): The content to write
-
-**Examples:**
-```json
-{"name": "write_file", "input": {"path": "review-report.md", "content": "# Review Report\n..."}}
-```
-
-**Use cases:**
-- Create review reports if requested
-- Write suggested fixes or patches
-- Document findings in a structured format
-
-### git_command
-Execute git commands to inspect repository state.
-```
-git_command(args: string[], cwd?: string) -> { title: string, output: string }
-```
-
-**Parameters:**
-- `args` (string[]): Git command arguments (without 'git')
-- `cwd` (optional string): Working directory
-
-**Common Commands for Review:**
-
-| Scenario | Command | Example |
-|----------|---------|---------|
-| List changed files | `["status", "--short"]` | See what files changed |
-| Unstaged changes | `["diff"]` | View unstaged diff |
-| Staged changes | `["diff", "--cached"]` | View staged diff |
-| All uncommitted | `["diff", "HEAD"]` | All local changes |
-| Branch diff | `["diff", "main...HEAD"]` | Changes in current branch |
-| Commit range | `["diff", "abc123..HEAD"]` | Changes since commit |
-| Show commit | `["show", "<hash>"]` | View specific commit |
-| Recent commits | `["log", "--oneline", "-n", "20"]` | Recent history |
-| File blame | `["blame", "<file>"]` | Line-by-line history |
-| Current branch | `["branch", "--show-current"]` | Get branch name |
-| All branches | `["branch", "-a"]` | List all branches |
-
-**Examples:**
-```json
-{"name": "git_command", "input": {"args": ["status", "--short"]}}
-{"name": "git_command", "input": {"args": ["diff", "main...HEAD"]}}
-{"name": "git_command", "input": {"args": ["log", "--oneline", "-n", "10"]}}
-```
-
-### gh_command
-Execute GitHub CLI (gh) commands for PR information.
-```
-gh_command(args: string[], cwd?: string) -> { title: string, output: string }
-```
-
-**Parameters:**
-- `args` (string[]): gh command arguments (without 'gh')
-- `cwd` (optional string): Working directory
-
-**Common Commands for Review:**
-
-| Scenario | Command | Example |
-|----------|---------|---------|
-| View PR info | `["pr", "view", "<number>"]` | PR details |
-| PR as JSON | `["pr", "view", "<number>", "--json", "title,body,files"]` | Structured data |
-| PR diff | `["pr", "diff", "<number>"]` | Code changes |
-| PR comments | `["pr", "view", "<number>", "--comments"]` | Existing reviews |
-| List PRs | `["pr", "list"]` | Open PRs |
-
-**Examples:**
-```json
-{"name": "gh_command", "input": {"args": ["pr", "view", "12"]}}
-{"name": "gh_command", "input": {"args": ["pr", "diff", "12"]}}
-{"name": "gh_command", "input": {"args": ["pr", "view", "12", "--json", "title,body,author"]}}
-```
+1. **优先读取变更的文件，而非依赖 diff**
+2. **检查项目根目录的 AGENTS.md, CLAUDE.md**
+3. **对于大型文件，关注变更相关的部分**
 ```
 
 ---
 
-## 8. 测试计划
+## 7. 测试计划
 
-### 8.1 单元测试
+### 7.1 单元测试
 
-- 每个工具的独立测试
-- 参数验证测试
-- 错误处理测试
+- [ ] `read_file` 工具测试
+- [ ] `write_file` 工具测试
+- [ ] `git` 工具测试（mock）
+- [ ] `gh` 工具测试（mock）
 
-### 8.2 集成测试
+### 7.2 集成测试
 
-- 分支审查场景测试
-- 提交审查场景测试
-- PR 审查场景测试
+- [ ] 分支对比审查
+- [ ] 提交范围审查
+- [ ] PR 审查（需要真实 GitHub 仓库）
+- [ ] 暂存变更审查
 
-### 8.3 端到端测试
+### 7.3 端到端测试
 
-使用真实仓库测试完整的审查流程。
+- [ ] 完整审查流程（真实 LLM 调用）
+- [ ] 多轮对话场景
+- [ ] 错误处理场景
 
 ---
 
-## 9. 后续扩展
+## 8. 后续优化
 
-### 9.1 短期
+### 8.1 性能优化
 
-- [ ] 支持更多 git 操作（stash、rebase 等）
-- [ ] 支持 GitLab CLI (glab)
-- [ ] 支持增量审查（只审查新增内容）
+- 并行读取多个文件
+- 缓存 git 命令结果
+- 增量审查（只审查新变更）
 
-### 9.2 长期
+### 8.2 功能增强
 
-- [ ] 支持自定义审查规则
-- [ ] 集成静态分析工具（ESLint、Biome 等）
-- [ ] 支持多语言项目的语言特定审查
-- [ ] 生成修复 PR 的能力
+- 支持自定义审查规则
+- 集成 lint 工具结果
+- 支持多语言代码审查
+- 生成 GitHub PR 评论
+
+### 8.3 用户体验
+
+- 进度条显示
+- 彩色输出
+- 交互式模式
+- VS Code 集成
+
+---
+
+## 9. 总结
+
+本设计文档描述了一个基于 simple-agent 框架的 CodeReview Agent，具备以下特点：
+
+1. **四个核心工具**：read_file, write_file, git, gh
+2. **多种审查模式**：分支、提交、PR、文件等
+3. **智能上下文获取**：自动读取完整文件和项目规范
+4. **规范化输出**：按严重程度分类的审查报告
+
+通过完善的 System Prompt 和工具设计，Agent 能够理解用户的自然语言请求，自动选择正确的工具和命令，执行完整的代码审查流程。
