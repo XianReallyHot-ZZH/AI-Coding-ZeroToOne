@@ -18,7 +18,22 @@
 https://yuyz0112.github.io/claude-code-reverse/visualize.html
 
 
+## 搭一个 simple agent
 
+### 探索生成 simple agent 的 design
 
+请你参考 ./venders/opencode 源码，分析 opencode 的主要功能和核心设计，然后帮我设计一个 simple agent（Simple Multi-turn Agent with Tool Calling），它能够：
+
+1. 接收用户消息
+2. 调用 LLM 生成响应
+3. 识别并执行工具调用
+4. 将工具结果返回给 LLM
+5. 循环直到任务完成
+
+最终请你给我一份 simple agent 的 design 文档，放在 ./specs/w6/ 目录下。
+
+### 实现
+
+基于 ./specs/w6/simple-agent-design.md 的规范，使用 openai 构建一个 agent sdk，提供 agent 的核心功能，用户可以很方便地为 agent 添加自定义工具和 mcp。完成构建后，确保所有实现否符合 design spec，并提供几个 example 来展示如何使用（包含至少一个使用 mcp 的例子）。
 
 
