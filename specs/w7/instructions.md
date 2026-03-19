@@ -24,3 +24,19 @@
 
 代码放在 @week07/genslides 目录下。
 
+## Implement backend and frontend
+
+根据 @specs/w7/0002-design-spec.md 的内容，启动 python 和 typescript 两个 agent 分别撰写后端和前端的代码。代码在 @week07/genslides 下。
+
+
+## Test the app
+
+启动 @week07/genslides 目录下的 后端代码
+
+启动 @week07/genslides 目录下的 前端代码
+
+为 @week07/genslides 目录下的前后端代码生成 .gitignore 文件
+
+为 @week07/genslides 项目生成 README.md 文件
+
+

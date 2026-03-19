@@ -502,23 +502,23 @@ week05/pg-mcp/
 
 ---
 
-## pg-query Skill
+### pg-query Skill
 
 基于 week05 项目创建的自定义 Skill，支持通过自然语言查询 PostgreSQL 数据库。
 
-### 使用方法
+#### 使用方法
 
 ```bash
 /pg-query <自然语言查询>
 /pg-query <自然语言查询> --sql-only  # 仅返回 SQL，不执行
 ```
 
-### 数据库连接
+#### 数据库连接
 
 - Host: localhost:5432, User: postgres, Password: 123456
 - 可用数据库：`pg_mcp_test_small`, `pg_mcp_test_medium`, `pg_mcp_test_large`
 
-### 工作流程
+#### 工作流程
 
 1. **识别数据库** - 根据关键词自动选择目标数据库
 2. **读取 Schema** - 从 `.claude/skills/pg-query/references/` 读取对应数据库结构
@@ -527,46 +527,412 @@ week05/pg-mcp/
 5. **执行查询** - 使用 psql 执行（非 --sql-only 模式）
 6. **评估结果** - 打分 0-10，<7 分则重试（最多 3 次）
 
-### 示例查询
+---
 
+## week06 - Agent SDK 开发与代码审查 Agent 实践
+
+### 主题概述
+
+本周聚焦于 **Agent SDK 的设计与实现**，以及基于 Agent SDK 构建实用的 **CodeReview Agent**。通过分析业界领先的 AI Coding Agent（Codex、OpenCode）源码，学习 System Prompt 设计和工具调用架构，并亲手实现一个可扩展的 Agent 框架。
+
+### 核心学习内容
+
+#### 1. 业界 Agent 源码分析
+
+**Codex CLI (OpenAI)**：
+- 多层次 System Prompt 架构（Base → Developer → User → Skill → Environment）
+- 动态注入机制（权限策略、协作模式、个性化设置）
+- 工具调用系统（Tool Router → Registry → Handler Trait）
+
+**OpenCode**：
+- 分层 Prompt 策略（根据模型动态选择 Prompt）
+- 流式处理与异步架构
+- MCP 协议集成
+
+#### 2. System Prompt 设计模式
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   LLM Context Window                        │
+├─────────────────────────────────────────────────────────────┤
+│  BaseInstructions        - 模型基础身份和能力定义             │
+│  DeveloperInstructions   - 运行时动态注入的配置               │
+│  UserInstructions        - 来自 AGENTS.md 的用户指导         │
+│  SkillInstructions       - 可用技能列表和使用指南             │
+│  EnvironmentContext      - 环境上下文和配置                   │
+│  ConversationHistory     - 历史对话上下文                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 项目实战 1: Simple Agent SDK
+
+基于 OpenCode 源码分析设计并实现的轻量级 Agent SDK，支持工具调用和 MCP 集成。
+
+**技术栈**：
+| 技术 | 用途 |
+|------|------|
+| **TypeScript** | 核心语言 |
+| **Zod** | 参数验证与 Schema 定义 |
+| **OpenAI SDK** | LLM 调用 |
+| **MCP SDK** | Model Context Protocol 集成 |
+
+**核心功能**：
+1. **Tool Calling** - 使用 Zod Schema 定义工具，类型安全的参数验证
+2. **Streaming-First** - 实时流式响应输出
+3. **Multi-turn Conversations** - 内置会话管理
+4. **MCP Support** - 集成 MCP 服务器扩展能力
+5. **Multi-Provider** - 支持 OpenAI、DeepSeek 及 OpenAI 兼容 API
+
+**架构设计**：
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          Agent Loop                              │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │   Message   │───▶│     LLM     │───▶│   Tool      │         │
+│  │   History   │    │   Provider  │    │   Executor  │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│         ▲                                    │                  │
+│         └────────────────────────────────────┘                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**项目结构**：
+```
+week06/simple-agent/
+├── src/
+│   ├── agent.ts        # Agent 核心循环
+│   ├── tool.ts         # 工具定义（defineTool）
+│   ├── executor.ts     # 工具执行器
+│   ├── conversation.ts # 会话管理
+│   ├── providers/      # LLM 提供商（OpenAI, DeepSeek, Mock）
+│   ├── mcp/            # MCP 客户端集成
+│   └── utils/          # 配置加载等工具
+├── examples/           # 使用示例
+└── README.md
+```
+
+**使用示例**：
+```typescript
+import { Agent, DeepSeekProvider, defineTool, ToolRegistry } from "simple-agent";
+
+const echoTool = defineTool("echo", {
+  description: "Echo back the input message",
+  parameters: z.object({ message: z.string() }),
+  execute: async (args) => ({
+    title: "Echo",
+    output: `Echo: ${args.message}`,
+  }),
+});
+
+const toolRegistry = new ToolRegistry();
+toolRegistry.register(echoTool);
+
+const agent = new Agent({
+  provider: new DeepSeekProvider({ model: "deepseek-chat" }),
+  maxSteps: 10,
+  systemPrompt: "You are a helpful assistant.",
+  onTextDelta: (text) => process.stdout.write(text),
+}, toolRegistry);
+
+const result = await agent.run("Hello!");
+```
+
+---
+
+### 项目实战 2: CodeReview Agent
+
+基于 Simple Agent SDK 构建的智能代码审查代理，支持多种审查场景。
+
+**技术栈**：
+| 技术 | 用途 |
+|------|------|
+| **simple-agent** | 底层 Agent 框架 |
+| **Commander** | CLI 框架 |
+| **Zod** | 参数验证 |
+
+**核心功能**：
+1. **多种审查模式** - 分支对比、提交对比、PR 审查、文件审查
+2. **上下文感知** - 不仅查看 diff，还会读取完整文件内容
+3. **智能工具调用** - 自动选择合适的 git/gh 命令获取代码差异
+4. **规范化输出** - 按严重程度分类输出审查结果
+5. **多模型支持** - OpenAI、DeepSeek 及 OpenAI 兼容 API
+
+**工具定义**：
+| 工具 | 描述 |
+|------|------|
+| `read_file` | 读取文件内容，获取代码上下文 |
+| `write_file` | 写入文件，用于生成审查报告 |
+| `git_command` | 执行 Git 命令，获取代码变更信息 |
+| `gh_command` | 执行 GitHub CLI 命令，获取 PR 信息 |
+
+**审查场景**：
+| 输入示例 | 审查类型 | 使用的命令 |
+|---------|---------|-----------|
+| 无参数 | 未提交变更/分支差异 | `git diff HEAD` 或 `git diff main...HEAD` |
+| `abc123` | 单次提交 | `git show abc123` |
+| `abc123..HEAD` | 提交范围 | `git diff abc123..HEAD` |
+| `pr:12` 或 `12` | PR 审查 | `gh pr diff 12` |
+| `feature/auth` | 分支对比 | `git diff main...feature/auth` |
+
+**CLI 使用**：
 ```bash
-# 博客系统
-/pg-query 查询所有已发布的文章
-/pg-query 查找浏览量超过 1000 的文章 --sql-only
+# 使用 DeepSeek 审查当前分支新代码
+pnpm review -- --provider deepseek --base develop
 
-# 电商系统
-/pg-query 显示价格低于 100 美元的活跃产品
-/pg-query 查询最近 7 天已发货的订单
+# 审查特定 PR
+pnpm review -- "pr:12"
 
-# ERP 系统
-/pg-query 列出 IT 部门的所有活跃员工
-/pg-query 查找处于谈判阶段的交易
+# 交互模式（支持多轮对话）
+pnpm review -- -i
+
+# 输出报告到文件
+pnpm review -- -o review-report.md
 ```
 
-### Skill 文件结构
+**项目结构**：
+```
+week06/codereview-agent/
+├── src/
+│   ├── agent.ts        # Agent 实例创建
+│   ├── cli.ts          # CLI 入口
+│   ├── tools/          # 工具定义
+│   │   ├── git.ts      # git 命令工具
+│   │   ├── gh.ts       # gh 命令工具
+│   │   ├── read-file.ts
+│   │   └── write-file.ts
+│   └── utils/          # 工具函数
+├── prompts/
+│   └── system.md       # System Prompt
+└── README.md
+```
+
+**输出格式**：
+```markdown
+# Code Review Report
+
+## Critical Issues 🔴
+必须修复的问题（bug、安全漏洞、破坏性变更）
+
+## Important Issues 🟡
+应该解决的问题（性能、可维护性、最佳实践）
+
+## Suggestions 🟢
+次要改进和可选增强
+
+## Positive Observations ✅
+值得注意的良好实践
+```
+
+---
+
+### 规格文档
+
+完整的开发文档位于 `specs/w6/` 目录：
+
+**学习文档**：
+- [Codex System Prompt 详解](specs/w6/learnings/codex-prompts-and-tools.md)
+- [OpenCode System Prompts 分析](specs/w6/learnings/opencode-system-prompts.md)
+- [OpenCode LLM I/O 捕获方案](specs/w6/learnings/opencode-llm-io-capture.md)
+
+**设计文档**：
+- [Simple Agent 设计文档](specs/w6/simple-agent-design.md)
+- [CodeReview Agent 设计文档](specs/w6/codereview-agent-design.md)
+
+**Prompt 参考**：
+- [Codex Prompt 参考](specs/w6/prompts/codex-prompt.md)
+- [OpenCode Review Prompt](specs/w6/prompts/opencode-review.txt)
+
+---
+
+### 学习收获
+
+1. **Agent 架构设计** - 多层次 System Prompt、动态注入机制、工具调用系统
+2. **工具调用模式** - Tool Registry、Tool Executor、Zod Schema 验证
+3. **MCP 协议实践** - 集成 MCP 服务器扩展 Agent 能力
+4. **多 Provider 支持** - OpenAI、DeepSeek、OpenAI 兼容 API 适配
+5. **CLI 开发** - Commander 框架、参数解析、交互模式
+6. **流式处理** - 实时响应输出、事件驱动架构
+7. **代码审查自动化** - git/gh 命令组合、上下文感知分析
+
+---
+
+## week07 - AI 图片幻灯片生成器
+
+### 主题概述
+
+本周聚焦于 **AI 图片生成技术** 的实践应用，从调研业界 AI Slides 工具（Manus、NotebookLM）出发，基于 Google 最新发布的 **Nano Banana Pro**（Gemini 3 Pro Image）构建一个完整的图片幻灯片生成器。完整体验从 Wireframe → PRD → Design Spec → 实现的 AI 辅助开发全流程。
+
+### 核心学习内容
+
+#### 1. AI Slides 工具调研
+
+**NotebookLM Slides 功能**：
+- 将笔记内容自动拆分为多页幻灯片
+- 基于内容生成配图，视觉风格统一
+- 支持导出和分享
+
+**核心实现原理**：
+```
+文本内容 → LLM 内容拆分 → 逐页图片生成 → 幻灯片串联播放
+                ↓
+         风格参考图片/文字描述（确保视觉一致性）
+```
+
+#### 2. Google Nano Banana Pro 探索
+
+**模型特性**：
+- 原生图文混合生成能力
+- 支持 16:9 宽高比
+- 多种分辨率输出（1K/2K/4K）
+- 风格参考图片保持视觉一致性
+
+---
+
+### 项目实战：GenSlides
+
+基于 Google Gemini API 的 AI 图片幻灯片生成器，支持从文本内容一键生成视觉风格统一的幻灯片。
+
+**技术栈**：
+
+| 层级 | 技术选型 |
+|------|----------|
+| 后端 | Python 3.12 + FastAPI + google-genai SDK |
+| 前端 | React 18 + TypeScript + Vite + TailwindCSS |
+| 图片生成 | Google Gemini 3 Pro Image (Nano Banana Pro) |
+| 流式响应 | SSE (Server-Sent Events) |
+| 轮播组件 | Embla Carousel 8 |
+
+**核心功能**：
+
+1. **智能内容拆分** - 输入主题或大纲，AI 自动拆分为多页幻灯片
+2. **AI 图片生成** - 基于 Nano Banana Pro 逐页生成配图
+3. **风格参考** - 支持上传风格参考图片，保持视觉一致性
+4. **多分辨率支持** - HD (1024x576)、FHD (1920x1080)、UHD (3840x2160)
+5. **实时进度** - SSE 流式推送生成进度
+6. **幻灯片轮播** - 全屏走马灯播放，支持自动/手动切换
+
+**架构设计**：
 
 ```
-.claude/skills/pg-query/
-├── SKILL.md                          # Skill 说明和工作流程
-└── references/
-    ├── pg_mcp_test_small.md          # 博客系统 Schema
-    ├── pg_mcp_test_medium.md         # 电商系统 Schema
-    └── pg_mcp_test_large.md          # ERP 系统 Schema
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          Browser (React SPA)                            │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐   │
+│  │ InputPanel   │ │ PreviewPanel │ │ Carousel     │ │ ProgressBar  │   │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘   │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ REST API + SSE
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        API Layer (FastAPI Routes)                        │
+│  POST /split │ POST /generate │ POST /regenerate │ GET /slides          │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          Service Layer                                   │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐         │
+│  │ SplitterService │  │ GeneratorService│  │  StyleService   │         │
+│  │ (LLM 内容拆分)  │  │(图片生成+并发)  │  │ (风格图片管理)  │         │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          Storage Layer                                   │
+│  ┌─────────────────┐  ┌─────────────────┐                              │
+│  │  ImageStorage   │  │  StyleStorage   │                              │
+│  │ (生成图片缓存)  │  │ (风格参考图片)  │                              │
+│  └─────────────────┘  └─────────────────┘                              │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**参考资源**: [Skill 源码](.claude/skills/pg-query)
+**项目结构**：
 
+```
+week07/genslides/
+├── backend/
+│   ├── app/
+│   │   ├── api/routes.py      # REST API 路由
+│   │   ├── models/schemas.py  # Pydantic 数据模型
+│   │   ├── services/          # 业务逻辑
+│   │   │   ├── generator.py   # 图片生成服务
+│   │   │   ├── splitter.py    # 内容拆分服务
+│   │   │   └── style.py       # 风格处理服务
+│   │   ├── storage/           # 存储层
+│   │   └── deps.py            # 依赖注入
+│   ├── output/                # 生成的图片
+│   ├── styles/                # 上传的风格图片
+│   └── main.py                # FastAPI 入口
+├── frontend/
+│   ├── src/
+│   │   ├── components/        # React 组件
+│   │   │   ├── Carousel.tsx   # 全屏走马灯
+│   │   │   ├── InputPanel.tsx # 输入面板
+│   │   │   ├── PreviewPanel.tsx
+│   │   │   ├── ProgressBar.tsx
+│   │   │   └── SlideCard.tsx
+│   │   ├── hooks/useSlides.ts # 状态管理 Hook
+│   │   ├── api/client.ts      # API 客户端
+│   │   └── App.tsx
+│   └── package.json
+└── README.md
+```
 
+**API 端点**：
 
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| POST | `/api/slides/split` | 将内容拆分为多页幻灯片 |
+| POST | `/api/slides/generate` | 批量生成幻灯片图片 (SSE 流) |
+| POST | `/api/slides/{id}/regenerate` | 重新生成单页幻灯片 |
+| GET | `/api/slides` | 获取所有幻灯片数据 |
+| PUT | `/api/slides/reorder` | 调整幻灯片顺序 |
+| POST | `/api/style/upload` | 上传风格参考图片 |
 
-## week06
+**技术亮点**：
 
+1. **三层架构设计** - API Layer → Service Layer → Storage Layer，单向依赖
+2. **并发控制** - `asyncio.Semaphore` 限制同时生成数，避免 API 限流
+3. **SSE 流式响应** - 实时推送每页生成进度，用户体验流畅
+4. **风格一致性** - 通过风格参考图片 + 文字描述确保所有页面视觉统一
+5. **错误隔离** - 单页生成失败不影响其他页面，支持单独重试
 
+**使用流程**：
 
+```
+1. 输入主题或大纲内容
+2. (可选) 上传风格参考图片
+3. (可选) 设置视觉风格描述
+4. 点击"拆分内容" → LLM 生成幻灯片大纲
+5. 预览并编辑各页内容
+6. 点击"生成图片" → AI 并发生成配图
+7. 生成完成后点击"播放"查看轮播效果
+```
 
-## week07
+---
 
+### 规格文档
 
+完整的开发文档位于 `specs/w7/` 目录：
+
+- [PRD 产品需求文档](specs/w7/0001-prd.md)
+- [设计规格文档](specs/w7/0002-design-spec.md)
+- [Wireframe 原型图](specs/w7/genslide.jpg)
+
+---
+
+### 学习收获
+
+1. **AI 图片生成技术** - Nano Banana Pro API 调用、风格参考、分辨率控制
+2. **SSE 流式响应** - FastAPI StreamingResponse 实现实时进度推送
+3. **并发控制模式** - asyncio.Semaphore 限制并发、as_completed 逐个处理
+4. **三层架构设计** - SOLID 原则应用、依赖注入、单向依赖
+5. **前端状态管理** - 自定义 Hook 集中管理、SSE 流消费
+6. **全屏轮播实现** - Embla Carousel + Fullscreen API
+7. **从 Wireframe 到实现** - 完整的 AI 辅助开发流程
 
 
 ## week08
