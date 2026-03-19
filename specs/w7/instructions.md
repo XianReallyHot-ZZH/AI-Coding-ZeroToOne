@@ -12,5 +12,15 @@
 
 根据 @specs/w7/0001-prd.md 和 @specs/w7/genslide.jpg 的内容，生成一个 design spec，放在 ./specs/w7/0002-design-spec.md 文件中。要求：使用中文，注意所有前端所需的 API 接口要定义清楚。整体项目的目录结构也要定义清楚，后端代码层次清晰，API/业务/存储要保持清晰的边界。
 
+## Generate project structure
 
+根据 @specs/w7/0002-design-spec.md 的内容，生成项目的空的目录结构。先不要生成代码。在 backend/ 和 frontend/ 目录下分别生成 CLAUDE.md 文件，内容考虑：
+
+- 所使用语言框架的 best practices
+- 架构设计遵循的原则：SOLID/YAGNI/KISS
+- 代码的组织结构
+- 并发处理
+- 错误处理和日志处理
+
+代码放在 @week07/genslides 目录下。
 
