@@ -24,9 +24,11 @@ public class AgentService {
     private static final Logger log = LoggerFactory.getLogger(AgentService.class);
 
     private final ChatClient chatClient;
+    private final ChatModel chatModel;
     private final AgentProperties properties;
 
     public AgentService(ChatModel chatModel, AgentProperties properties) {
+        this.chatModel = chatModel;
         this.properties = properties;
 
         // 构建 ChatClient
@@ -36,6 +38,17 @@ public class AgentService {
             .build();
 
         log.info("AgentService initialized with model: {}", properties.getDefaultModel());
+    }
+
+    /**
+     * 获取可用工具列表
+     *
+     * @return 工具名称列表
+     */
+    public java.util.List<String> getAvailableTools() {
+        return java.util.List.of(
+            "bash", "readFile", "writeFile", "http", "listFiles", "fileExists"
+        );
     }
 
     /**
