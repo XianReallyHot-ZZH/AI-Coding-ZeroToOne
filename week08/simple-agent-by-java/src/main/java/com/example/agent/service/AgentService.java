@@ -10,9 +10,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -26,15 +31,26 @@ public class AgentService {
     private final ChatClient chatClient;
     private final ChatModel chatModel;
     private final AgentProperties properties;
+    private final List<ToolCallback> allTools;
 
-    public AgentService(ChatModel chatModel, AgentProperties properties) {
+    public AgentService(
+            ChatModel chatModel,
+            AgentProperties properties,
+            ToolCallbackProvider builtinToolCallbackProvider) {
+
         this.chatModel = chatModel;
         this.properties = properties;
 
+        // 获取内置工具
+        this.allTools = new ArrayList<>(Arrays.asList(builtinToolCallbackProvider.getToolCallbacks()));
+
+        log.info("Total tools available: {} - {}", allTools.size(),
+            allTools.stream().map(ToolCallback::getToolDefinition).map(d -> d.name()).toList());
+
         // 构建 ChatClient
-        // 工具通过 @Bean + @Description 注解自动注册
         this.chatClient = ChatClient.builder(chatModel)
             .defaultSystem(properties.getSystemPrompt())
+            .defaultToolCallbacks(allTools)
             .build();
 
         log.info("AgentService initialized with model: {}", properties.getDefaultModel());
@@ -45,10 +61,11 @@ public class AgentService {
      *
      * @return 工具名称列表
      */
-    public java.util.List<String> getAvailableTools() {
-        return java.util.List.of(
-            "bash", "readFile", "writeFile", "http", "listFiles", "fileExists"
-        );
+    public List<String> getAvailableTools() {
+        return allTools.stream()
+            .map(ToolCallback::getToolDefinition)
+            .map(d -> d.name())
+            .toList();
     }
 
     /**

@@ -11,6 +11,16 @@ spring:
           model: ${AI_MODEL:gpt-4o}
           temperature: 0.7
 
+    # MCP Client 配置
+    mcp:
+      client:
+        enabled: ${MCP_ENABLED:true}
+        type: SYNC
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
+        toolcallback:
+          enabled: true
+
 # Agent 配置
 agent:
   default-model: gpt-4o
