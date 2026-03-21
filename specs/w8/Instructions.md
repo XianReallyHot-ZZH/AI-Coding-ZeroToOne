@@ -22,3 +22,20 @@
 评估一下可以使用 spring-ai 吗？ 能不能帮助简化开发？ 综合分析后，如果可以的话，更新 @specs/w8/X002-java-migration-analysis.md 文档
 
 把构建工具 Gradle 换成 maven，更新 @specs/w8/X002-java-migration-analysis.md 文档
+
+### 设计文档
+
+提炼 @specs/w6/X001-simple-agent-design.md 文档中的原始任务需求，然后使用 @specs/w8/X002-java-migration-analysis.md 中推荐的技术栈，进行设计文档的编写，文件放在 @specs/w8/ 路径下，文件名你自己想就行
+
+### 实施计划
+
+根据 @specs/w8/X003-design-document.md 文档，编写实施计划，放在 @specs/w8/X004-implementation-plan.md 文档中
+
+
+### 实施
+
+根据 @specs/w8/X003-design-document.md 设计文档 和 @specs/w8/X004-implementation-plan.md 实施计划文档，开始实现 Phase 1， 代码放在 @week08/simple-agent-by-java 下
+
+
+
+
