@@ -73,6 +73,19 @@ public class AgentController {
     }
 
     /**
+     * 清除会话记忆
+     *
+     * @param sessionId 会话 ID
+     * @return 操作结果
+     */
+    @DeleteMapping("/session/{sessionId}")
+    public ResponseEntity<ClearResponse> clearSession(@PathVariable String sessionId) {
+        log.info("Clear session request - sessionId: {}", sessionId);
+        agentService.clearMemory(sessionId);
+        return ResponseEntity.ok(new ClearResponse("Session cleared", sessionId));
+    }
+
+    /**
      * 获取可用工具列表
      *
      * @return 工具名称列表
@@ -97,6 +110,8 @@ public class AgentController {
     public record ChatRequest(String message) {}
 
     public record ChatResponse(String content) {}
+
+    public record ClearResponse(String message, String sessionId) {}
 
     public record ToolsResponse(java.util.List<String> tools) {}
 

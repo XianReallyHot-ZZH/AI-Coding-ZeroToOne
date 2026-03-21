@@ -1,6 +1,7 @@
 package com.example.agent.service;
 
 import com.example.agent.config.AgentProperties;
+import com.example.agent.metrics.AgentMetrics;
 import com.example.agent.types.AgentEvent;
 import com.example.agent.types.CompleteEvent;
 import com.example.agent.types.TextEvent;
@@ -32,14 +33,17 @@ public class AgentService {
     private final ChatModel chatModel;
     private final AgentProperties properties;
     private final List<ToolCallback> allTools;
+    private final AgentMetrics metrics;
 
     public AgentService(
             ChatModel chatModel,
             AgentProperties properties,
-            ToolCallbackProvider builtinToolCallbackProvider) {
+            ToolCallbackProvider builtinToolCallbackProvider,
+            AgentMetrics metrics) {
 
         this.chatModel = chatModel;
         this.properties = properties;
+        this.metrics = metrics;
 
         // 获取内置工具
         this.allTools = new ArrayList<>(Arrays.asList(builtinToolCallbackProvider.getToolCallbacks()));
@@ -77,16 +81,26 @@ public class AgentService {
      */
     public String chat(String sessionId, String userMessage) {
         log.debug("Chat request - sessionId: {}, message: {}", sessionId, userMessage);
+        long startTime = System.currentTimeMillis();
 
-        String response = chatClient.prompt()
-            .user(userMessage)
-            .call()
-            .content();
+        try {
+            metrics.recordRequest();
 
-        log.debug("Chat response - sessionId: {}, length: {}", sessionId,
-            response != null ? response.length() : 0);
+            String response = chatClient.prompt()
+                .user(userMessage)
+                .call()
+                .content();
 
-        return response;
+            metrics.recordDuration(System.currentTimeMillis() - startTime);
+            log.debug("Chat response - sessionId: {}, length: {}", sessionId,
+                response != null ? response.length() : 0);
+
+            return response;
+
+        } catch (Exception e) {
+            metrics.recordError();
+            throw e;
+        }
     }
 
     /**
@@ -98,6 +112,9 @@ public class AgentService {
      */
     public Flux<AgentEvent> chatStream(String sessionId, String userMessage) {
         log.debug("Stream request - sessionId: {}, message: {}", sessionId, userMessage);
+        long startTime = System.currentTimeMillis();
+
+        metrics.recordRequest();
 
         return chatClient.prompt()
             .user(userMessage)
@@ -105,8 +122,23 @@ public class AgentService {
             .chatResponse()
             .map(this::toAgentEvent)
             .filter(Objects::nonNull)
-            .doOnComplete(() -> log.debug("Stream completed - sessionId: {}", sessionId))
-            .doOnError(e -> log.error("Stream error - sessionId: {}", sessionId, e));
+            .doOnComplete(() -> {
+                metrics.recordDuration(System.currentTimeMillis() - startTime);
+                log.debug("Stream completed - sessionId: {}", sessionId);
+            })
+            .doOnError(e -> {
+                metrics.recordError();
+                log.error("Stream error - sessionId: {}", sessionId, e);
+            });
+    }
+
+    /**
+     * 清除会话记忆 (空实现)
+     *
+     * @param sessionId 会话 ID
+     */
+    public void clearMemory(String sessionId) {
+        log.info("Memory clear requested for session: {} (not implemented)", sessionId);
     }
 
     /**
