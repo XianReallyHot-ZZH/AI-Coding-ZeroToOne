@@ -30,6 +30,7 @@ public class AgentService {
         this.properties = properties;
 
         // 构建 ChatClient
+        // 工具通过 @Bean + @Description 注解自动注册
         this.chatClient = ChatClient.builder(chatModel)
             .defaultSystem(properties.getSystemPrompt())
             .build();
@@ -89,8 +90,8 @@ public class AgentService {
         var result = response.getResult();
         var output = result.getOutput();
 
-        // 处理文本内容 - 使用 getContent() 而不是 getText()
-        String content = output.getContent();
+        // 处理文本内容
+        String content = output.getText();
         if (content != null && !content.isEmpty()) {
             return new TextEvent(content);
         }
@@ -100,9 +101,8 @@ public class AgentService {
         if (metadata != null) {
             var usage = metadata.getUsage();
             long inputTokens = usage != null ? usage.getPromptTokens() : 0;
-            long outputTokens = usage != null ? usage.getGenerationTokens() : 0;
+            long outputTokens = usage != null ? usage.getCompletionTokens() : 0;
 
-            // 从 GenerateChatResponse 获取 finishReason
             return new CompleteEvent("stop", new Usage(inputTokens, outputTokens));
         }
 
