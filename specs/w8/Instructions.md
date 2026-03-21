@@ -41,11 +41,14 @@ spring-ai 已经明确发布了 1.1.x 版本了， 你再尝试一下使用1.1.x
 
 可以将 spring-boot 升级到 3.5.12 吗？ 请确保升级后可以运行
 
+支持使用 deepseek 模型
 
 
 ## code review 项目 翻译成 java 版本
 
+### 生成一个 system prompt 用于 codereview
 
+based on @specs/w8/prompts/codex-prompt.md and @specs/w8/prompts/opencode-review.txt think hard, we want to generate a system prompt for @week08/codereview-agent-by-java which is based on @week08/simple-agent-by-java/. The codereview agent will only have read file / write file / git command tool so make sure system prompt don't mention unexisting stuff. And make sure system prompt focused on code review but have all the good parts of @specs/w8/prompts/codex-prompt.md. Write the prompts down to @week08/codereview-agent-by-java/prompts/system.md. Think ultra hard.
 
 
 

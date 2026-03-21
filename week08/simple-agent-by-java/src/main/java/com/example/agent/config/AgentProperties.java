@@ -35,6 +35,55 @@ public class AgentProperties {
      */
     private int maxTokens = 4096;
 
+    /**
+     * AI 提供商配置
+     */
+    private Provider provider = new Provider();
+
+    /**
+     * 提供商配置
+     */
+    public static class Provider {
+        /**
+         * 提供商类型: openai, deepseek
+         */
+        private String type = "openai";
+
+        /**
+         * API Key
+         */
+        private String apiKey;
+
+        /**
+         * Base URL
+         */
+        private String baseUrl;
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+    }
+
     // Getters and Setters
 
     public String getDefaultModel() {
@@ -75,5 +124,13 @@ public class AgentProperties {
 
     public void setMaxTokens(int maxTokens) {
         this.maxTokens = maxTokens;
+    }
+
+    public Provider getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Provider provider) {
+        this.provider = provider;
     }
 }
