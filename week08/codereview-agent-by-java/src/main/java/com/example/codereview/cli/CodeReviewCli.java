@@ -53,10 +53,25 @@ public class CodeReviewCli {
     private static final Logger log = LoggerFactory.getLogger(CodeReviewCli.class);
 
     public static void main(String[] args) {
-        // 检查是否是 CLI 模式
-        boolean cliMode = args.length > 0 && !args[0].startsWith("--");
+        // 检查是否是 CLI 模式（有非 Spring 参数，或者无参数进入交互模式）
+        boolean hasInteractiveFlag = false;
+        boolean hasServerFlag = false;
+        boolean hasNonSpringArgs = false;
 
-        if (cliMode) {
+        for (String arg : args) {
+            if ("-i".equals(arg) || "--interactive".equals(arg)) {
+                hasInteractiveFlag = true;
+            } else if ("--server".equals(arg) || arg.startsWith("--server.port")) {
+                hasServerFlag = true;
+            } else if (!arg.startsWith("--")) {
+                hasNonSpringArgs = true;
+            }
+        }
+
+        // CLI 模式：有非 Spring 参数、有交互标志、或无参数
+        boolean cliMode = hasNonSpringArgs || hasInteractiveFlag || args.length == 0;
+
+        if (cliMode && !hasServerFlag) {
             // CLI 模式 - 禁用 Web 服务器
             new SpringApplicationBuilder(CodeReviewCli.class)
                 .web(org.springframework.boot.WebApplicationType.NONE)
@@ -75,23 +90,38 @@ public class CodeReviewCli {
             AgentMetrics metrics) {
 
         return args -> {
-            // 如果有参数且不是 Spring 的参数，则进入 CLI 模式
-            if (args.length > 0 && !args[0].startsWith("--")) {
-                // 设置工作目录为当前目录
-                String userDir = System.getProperty("user.dir");
-                properties.setWorkingDirectory(userDir);
+            String userDir = System.getProperty("user.dir");
+            properties.setWorkingDirectory(userDir);
 
-                // 合并所有参数作为用户消息
-                String userMessage = String.join(" ", args);
+            // 检查是否是交互模式 (-i 或 --interactive)
+            boolean interactiveMode = System.getProperty("interactive") != null;
+            for (String arg : args) {
+                if ("-i".equals(arg) || "--interactive".equals(arg)) {
+                    interactiveMode = true;
+                    break;
+                }
+            }
 
+            // 过滤掉 -i 和 --interactive 参数
+            List<String> filteredArgs = new ArrayList<>();
+            for (String arg : args) {
+                if (!"-i".equals(arg) && !"--interactive".equals(arg) && !arg.startsWith("--")) {
+                    filteredArgs.add(arg);
+                }
+            }
+
+            // 交互模式：无参数或明确指定 -i/--interactive
+            if (interactiveMode || filteredArgs.isEmpty()) {
+                runInteractiveMode(chatModel, properties, metrics);
+                System.exit(0);
+            }
+            // 单次审查模式
+            else if (!filteredArgs.isEmpty()) {
+                String userMessage = String.join(" ", filteredArgs);
                 runCliReview(chatModel, properties, metrics, userMessage, userDir);
                 System.exit(0);
             }
-            // 否则进入交互模式或 Web 模式
-            else if (System.getProperty("interactive") != null) {
-                runInteractiveMode(chatModel, properties, metrics);
-            }
-            // Web 模式由 Spring Boot 自动启动
+            // Web 模式由 Spring Boot 自动启动（有 --server 等参数）
         };
     }
 
