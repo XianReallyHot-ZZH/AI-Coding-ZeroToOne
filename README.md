@@ -935,7 +935,191 @@ week07/genslides/
 7. **从 Wireframe 到实现** - 完整的 AI 辅助开发流程
 
 
-## week08
+## week08 - Spring AI Agent 开发实战
+
+### 主题概述
+
+本周聚焦于**将 TypeScript Agent SDK 迁移到 Java 技术栈**，基于 Spring AI 框架构建生产级的 AI Agent 应用。完成两个核心项目：通用多轮对话 Agent 和专业代码审查 Agent。
+
+### 技术栈迁移评估
+
+基于 week06 的 `x-simple-agent` (TypeScript) 项目，进行了全面的技术栈迁移可行性分析。
+
+**评估结论**：
+| 维度 | 纯 Java 实现 | Spring AI 实现 |
+|------|-------------|---------------|
+| 技术可行性 | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| 开发效率 | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| MCP 支持 | ⭐⭐ | ⭐⭐⭐⭐⭐ |
+| 代码量 | ~1600 行 | ~250 行 |
+
+**最终选型**: Spring AI 1.1+ + Spring Boot 3.5.x + Maven
+
+**Spring AI 核心优势**：
+- **声明式工具定义**: `@Tool` 注解替代手动实现，代码量减少 80%
+- **自动工具调用循环**: `ToolCallAdvisor` 框架自动处理
+- **原生 MCP 集成**: Boot Starter 自动配置，代码量减少 95%
+- **内置会话管理**: `ChatMemory` API 开箱即用
+
+---
+
+### 项目实战 1: Simple Agent by Java
+
+基于 Spring AI 的通用多轮对话 Agent 实现。
+
+**技术栈**：
+| 组件 | 版本 |
+|------|------|
+| Java | 17 |
+| Spring Boot | 3.5.12 |
+| Spring AI | 1.1.3 |
+| 构建工具 | Maven 3.9+ |
+
+**核心功能**：
+- **多模型支持**: OpenAI、DeepSeek 等兼容 API
+- **多轮对话**: 基于 ChatMemory 的会话记忆
+- **工具调用**: 内置 bash、readFile、writeFile、http 工具
+- **MCP 集成**: 支持 MCP 工具自动加载与扩展
+- **流式响应**: SSE (Server-Sent Events) 实时输出
+- **可观测性**: Actuator + Micrometer 指标监控
+
+**API 端点**：
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| POST | `/api/v1/agent/chat` | 同步对话 |
+| POST | `/api/v1/agent/stream` | 流式对话 (SSE) |
+| GET | `/api/v1/agent/tools` | 获取工具列表 |
+| DELETE | `/api/v1/agent/session/{id}` | 清除会话 |
+
+**项目结构**：
+```
+simple-agent-by-java/
+├── src/main/java/com/example/agent/
+│   ├── AgentApplication.java
+│   ├── config/           # 配置类 (AgentProperties, ToolConfig)
+│   ├── controller/       # REST API
+│   ├── service/          # AgentService 核心逻辑
+│   ├── tool/             # 内置工具 (@Tool 注解)
+│   ├── mcp/              # MCP 客户端配置
+│   └── types/            # 数据类型 (AgentEvent 等)
+└── src/main/resources/
+    ├── application.yml
+    └── mcp-servers.json  # MCP 服务器配置
+```
+
+**支持的模型**：
+| 提供商 | 模型 | 说明 |
+|--------|------|------|
+| OpenAI | gpt-4o | 最新多模态模型 (默认) |
+| OpenAI | gpt-4-turbo | GPT-4 Turbo |
+| DeepSeek | deepseek-chat | 通用对话模型 |
+| DeepSeek | deepseek-coder | 代码专用模型 |
+| DeepSeek | deepseek-reasoner | 推理模型 (R1) |
+
+---
+
+### 项目实战 2: Code Review Agent (yy-codereview)
+
+基于 Simple Agent 构建的专业代码审查 CLI 工具。
+
+**核心能力**：
+| 能力 | 描述 |
+|------|------|
+| 智能意图解析 | 理解用户审查请求类型（分支、提交、PR 等） |
+| 多源代码获取 | git diff、git show、gh pr 等多种方式 |
+| 专业代码审查 | 基于 system.md 定制的审查规则 |
+| 上下文理解 | 自动读取相关文件获取完整上下文 |
+
+**工具设计**：
+| 工具 | 功能 | 示例操作 |
+|------|------|----------|
+| `readFile` | 读取文件内容 | 安全限制，禁止路径穿越 |
+| `writeFile` | 写入审查报告 | 输出 Markdown 格式报告 |
+| `gitCommand` | Git 命令执行 | UNSTAGED_DIFF, BRANCH_DIFF, COMMIT_DIFF 等 |
+| `ghCommand` | GitHub CLI 命令 | PR_VIEW, PR_DIFF, PR_LIST 等 |
+
+**使用方式**：
+```bash
+# 单次审查
+yy-codereview "review current branch"
+yy-codereview "review commit abc123"
+yy-codereview "review PR 12"
+
+# 交互模式
+yy-codereview -i
+
+# Web API 模式
+yy-codereview --server
+```
+
+**支持的审查类型**：
+| 输入 | 审查类型 |
+|------|----------|
+| "当前改动" / "未提交" | 未提交改动 (git diff + git diff --cached) |
+| "当前分支" / "和 X 的差异" | 分支差异 (git diff base...HEAD) |
+| 提交哈希 / "commit X" | 提交审查 (git show) |
+| "PR X" / "pull request X" | PR 审查 (gh pr diff) |
+| "X 之后" / "从 X 到 Y" | 提交范围 (git diff X..Y) |
+
+**项目结构**：
+```
+codereview-agent-by-java/
+├── src/main/java/com/example/codereview/
+│   ├── CodeReviewAgentApplication.java
+│   ├── cli/               # CLI 入口 (CodeReviewCli)
+│   ├── config/            # 配置类
+│   ├── controller/        # REST API
+│   ├── service/           # 核心服务
+│   ├── tool/              # 工具实现 (GitOperations, GhOperations)
+│   └── types/             # 请求/响应类型
+├── src/main/resources/
+│   └── prompts/system.md  # 系统提示词
+├── yy-codereview          # Linux/macOS 启动脚本
+└── yy-codereview.bat      # Windows 启动脚本
+```
+
+---
+
+### 规格文档
+
+**技术评估与设计**：
+| 文档 | 说明 |
+|------|------|
+| [Java 迁移评估](specs/w8/X002-java-migration-analysis.md) | TypeScript → Java 技术栈迁移可行性分析 |
+| [Spring AI Agent 设计](specs/w8/X003-spring-ai-agent-design.md) | Simple Agent 详细设计文档 |
+| [实施计划](specs/w8/X004-implementation-plan.md) | 5 阶段实施计划 (7-10 天) |
+| [Code Review Agent 设计](specs/w8/X005-codereview-agent-design.md) | 代码审查 Agent 详细设计 |
+
+**Prompt 工程**：
+| 文档 | 说明 |
+|------|------|
+| [prompts/system.md](week08/codereview-agent-by-java/prompts/system.md) | Code Review Agent 系统提示词 |
+
+---
+
+### 学习收获
+
+1. **Spring AI 框架实践** - 掌握 `@Tool` 注解、ChatClient、ToolCallAdvisor 等核心组件
+2. **技术栈迁移方法** - 从 TypeScript 到 Java 的系统化迁移评估与实施
+3. **MCP 协议集成** - Spring AI 原生 MCP Client 配置与使用
+4. **Agent 工具系统设计** - Git/GitHub CLI 封装、意图解析、多源代码获取
+5. **CLI 应用开发** - Spring Boot CLI 模式、单次/交互/Web API 三种运行模式
+6. **流式响应处理** - SSE (Server-Sent Events) 实时输出
+7. **生产级部署** - Docker 容器化、环境变量配置、健康检查
+
+---
+
+### 关键代码参考
+
+**Simple Agent**:
+- [AgentService.java](week08/simple-agent-by-java/src/main/java/com/example/agent/service/AgentService.java) - 核心服务逻辑
+- [BuiltinTools.java](week08/simple-agent-by-java/src/main/java/com/example/agent/tool/BuiltinTools.java) - `@Tool` 注解示例
+- [McpClientConfig.java](week08/simple-agent-by-java/src/main/java/com/example/agent/mcp/McpClientConfig.java) - MCP 集成配置
+
+**Code Review Agent**:
+- [CodeReviewService.java](week08/codereview-agent-by-java/src/main/java/com/example/codereview/service/CodeReviewService.java) - 审查服务
+- [GitOperations.java](week08/codereview-agent-by-java/src/main/java/com/example/codereview/tool/GitOperations.java) - Git 命令封装
+- [GhOperations.java](week08/codereview-agent-by-java/src/main/java/com/example/codereview/tool/GhOperations.java) - GitHub CLI 封装
 
 
 
