@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: codereview-agent
+
+  ai:
+    openai:
+      # API Key (支持 OpenAI 或 DeepSeek)
+      api-key: ${AI_API_KEY:${DEEPSEEK_API_KEY:}}
+      # Base URL: OpenAI 或 DeepSeek 兼容端点
+      base-url: ${AI_BASE_URL:${OPENAI_BASE_URL:https://api.deepseek.com}}
+      chat:
+        options:
+          # 模型名称: gpt-4o, deepseek-chat, deepseek-reasoner 等
+          model: ${AI_MODEL:deepseek-reasoner}
+          temperature: 0.7
+
+# Code Review Agent 配置
+codereview:
+  default-model: ${AI_MODEL:deepseek-reasoner}
+  system-prompt-path: classpath:prompts/system.md
+  working-directory: ${user.dir}
+  max-file-size: 10485760  # 10MB
+  max-steps: 200
+  temperature: 0.7
+  max-tokens: 4096
+  git:
+    timeout-seconds: 30
+    max-output-bytes: 1048576  # 1MB
+  gh:
+    timeout-seconds: 30
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.example.codereview: DEBUG
+    org.springframework.ai: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+server:
+  port: ${SERVER_PORT:8080}
