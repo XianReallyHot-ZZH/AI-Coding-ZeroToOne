@@ -6,16 +6,12 @@ import com.example.codereview.tool.CodeReviewTools;
 import com.example.codereview.tool.GhOperations;
 import com.example.codereview.tool.GitOperations;
 import com.example.codereview.types.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -23,23 +19,18 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Description;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Code Review CLI - 在当前目录运行代码审查
@@ -58,14 +49,22 @@ public class CodeReviewCli {
 
     // ANSI 颜色代码
     private static final String RESET = "\u001B[0m";
+    private static final String BOLD = "\u001B[1m";
     private static final String GRAY = "\u001B[90m";
     private static final String GREEN = "\u001B[32m";
     private static final String YELLOW = "\u001B[33m";
     private static final String BLUE = "\u001B[34m";
     private static final String CYAN = "\u001B[36m";
+    private static final String RED = "\u001B[31m";
+
+    // 状态追踪
+    private final AtomicBoolean isFirstChunk = new AtomicBoolean(true);
+    private final AtomicBoolean isThinking = new AtomicBoolean(false);
+    private final AtomicInteger toolCallCount = new AtomicInteger(0);
+    private final AtomicBoolean hasOutputHeader = new AtomicBoolean(false);
 
     public static void main(String[] args) {
-        // 检查是否是 CLI 模式（有非 Spring 参数，或者无参数进入交互模式）
+        // 检查是否是 CLI 模式
         boolean hasInteractiveFlag = false;
         boolean hasServerFlag = false;
         boolean hasNonSpringArgs = false;
@@ -83,11 +82,9 @@ public class CodeReviewCli {
             }
         }
 
-        // CLI 模式：有非 Spring 参数、有交互标志、或无参数
         boolean cliMode = hasNonSpringArgs || hasInteractiveFlag || args.length == 0;
 
         if (cliMode && !hasServerFlag) {
-            // CLI 模式 - 禁用 Web 服务器，设置日志级别
             System.setProperty("spring.main.banner-mode", "off");
             System.setProperty("logging.level.root", verbose ? "INFO" : "OFF");
             System.setProperty("logging.level.com.example.codereview", verbose ? "DEBUG" : "OFF");
@@ -99,7 +96,6 @@ public class CodeReviewCli {
                 .logStartupInfo(false)
                 .run(args);
         } else {
-            // Web 模式
             SpringApplication.run(CodeReviewCli.class, args);
         }
     }
@@ -114,8 +110,7 @@ public class CodeReviewCli {
             String userDir = System.getProperty("user.dir");
             properties.setWorkingDirectory(userDir);
 
-            // 检查是否是交互模式 (-i 或 --interactive)
-            boolean interactiveMode = System.getProperty("interactive") != null;
+            boolean interactiveMode = false;
             for (String arg : args) {
                 if ("-i".equals(arg) || "--interactive".equals(arg)) {
                     interactiveMode = true;
@@ -123,7 +118,6 @@ public class CodeReviewCli {
                 }
             }
 
-            // 过滤参数
             List<String> filteredArgs = new ArrayList<>();
             for (String arg : args) {
                 if (!"-i".equals(arg) && !"--interactive".equals(arg)
@@ -133,13 +127,10 @@ public class CodeReviewCli {
                 }
             }
 
-            // 交互模式：无参数或明确指定 -i/--interactive
             if (interactiveMode || filteredArgs.isEmpty()) {
                 runInteractiveMode(chatModel, properties, metrics);
                 System.exit(0);
-            }
-            // 单次审查模式
-            else if (!filteredArgs.isEmpty()) {
+            } else if (!filteredArgs.isEmpty()) {
                 String userMessage = String.join(" ", filteredArgs);
                 runCliReview(chatModel, properties, metrics, userMessage, userDir);
                 System.exit(0);
@@ -157,29 +148,34 @@ public class CodeReviewCli {
             String userMessage,
             String workingDir) throws IOException {
 
-        // 检查是否是 Git 仓库
         if (!Path.of(workingDir, ".git").toFile().exists()) {
             System.err.println(RED + "Error: Not a Git repository: " + workingDir + RESET);
-            System.err.println("Please run this command in a Git repository directory.");
             System.exit(1);
         }
 
-        // 加载系统提示词和创建工具
         String systemPrompt = loadSystemPrompt(properties);
-        List<ToolCallback> tools = createTools(properties);
+        List<ToolCallback> tools = createToolsWithFeedback(properties);
 
-        // 构建 ChatClient
         ChatClient chatClient = ChatClient.builder(chatModel)
             .defaultSystem(systemPrompt)
             .defaultToolCallbacks(tools)
             .build();
 
+        // 重置状态
+        isFirstChunk.set(true);
+        isThinking.set(false);
+        toolCallCount.set(0);
+        hasOutputHeader.set(false);
+
         System.out.println();
-        System.out.println(GREEN + "Working directory:" + RESET + " " + workingDir);
-        System.out.println(GREEN + "Review request:" + RESET + " " + userMessage);
+        System.out.println(GREEN + BOLD + "Working directory:" + RESET + " " + workingDir);
+        System.out.println(GREEN + BOLD + "Review request:" + RESET + " " + userMessage);
         System.out.println();
 
-        // 执行审查 - 使用流式输出
+        // 显示思考状态
+        System.out.print(YELLOW + "🤔 Analyzing your request..." + RESET);
+        System.out.flush();
+
         long startTime = System.currentTimeMillis();
         metrics.recordRequest();
 
@@ -193,19 +189,30 @@ public class CodeReviewCli {
                 .doOnNext(response -> {
                     processStreamResponse(response, fullResponse, true);
                 })
+                .doOnComplete(() -> {
+                    if (fullResponse.length() == 0 && toolCallCount.get() == 0) {
+                        System.out.print("\r" + " ".repeat(40) + "\r");
+                        System.out.println(GRAY + "No response generated." + RESET);
+                    }
+                })
                 .blockLast();
 
             System.out.println();
             System.out.println();
             System.out.println(GRAY + "─".repeat(50) + RESET);
             long duration = System.currentTimeMillis() - startTime;
-            System.out.printf(GRAY + "Completed in %.1f seconds" + RESET + "%n", duration / 1000.0);
+            System.out.printf(GRAY + "✅ Completed in %.1f seconds", duration / 1000.0);
+            if (toolCallCount.get() > 0) {
+                System.out.printf(" (%d tool calls)", toolCallCount.get());
+            }
+            System.out.println(RESET);
 
             metrics.recordDuration(duration);
 
         } catch (Exception e) {
             metrics.recordError();
-            System.err.println(RED + "Error: " + e.getMessage() + RESET);
+            System.out.print("\r" + " ".repeat(50) + "\r");
+            System.err.println(RED + "❌ Error: " + e.getMessage() + RESET);
             log.error("Review failed", e);
             System.exit(1);
         }
@@ -222,30 +229,29 @@ public class CodeReviewCli {
         String workingDir = System.getProperty("user.dir");
         properties.setWorkingDirectory(workingDir);
 
-        // 加载系统提示词和创建工具
         String systemPrompt = loadSystemPrompt(properties);
-        List<ToolCallback> tools = createTools(properties);
+        List<ToolCallback> tools = createToolsWithFeedback(properties);
 
-        // 构建 ChatClient
         ChatClient chatClient = ChatClient.builder(chatModel)
             .defaultSystem(systemPrompt)
             .defaultToolCallbacks(tools)
             .build();
 
         System.out.println();
-        System.out.println(GREEN + "═".repeat(50) + RESET);
-        System.out.println(GREEN + "  Code Review Agent - Interactive Mode" + RESET);
-        System.out.println(GREEN + "═".repeat(50) + RESET);
+        System.out.println(GREEN + "═".repeat(55) + RESET);
+        System.out.println(GREEN + BOLD + "  Code Review Agent - Interactive Mode" + RESET);
+        System.out.println(GREEN + "═".repeat(55) + RESET);
         System.out.println();
-        System.out.println(GRAY + "  Working directory: " + workingDir + RESET);
-        System.out.println(GRAY + "  Type 'exit' or 'quit' to exit" + RESET);
-        System.out.println(GRAY + "  Type 'help' for available commands" + RESET);
+        System.out.println(GRAY + "  📁 Working directory: " + workingDir + RESET);
+        System.out.println(GRAY + "  🤖 Model: " + properties.getDefaultModel() + RESET);
+        System.out.println(GRAY + "  💬 Type 'exit' or 'quit' to exit" + RESET);
+        System.out.println(GRAY + "  ❓ Type 'help' for available commands" + RESET);
         System.out.println();
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
         while (true) {
-            System.out.print(CYAN + "> " + RESET);
+            System.out.print(CYAN + BOLD + "> " + RESET);
             String input = reader.readLine();
 
             if (input == null || input.isBlank()) {
@@ -255,7 +261,7 @@ public class CodeReviewCli {
             String trimmedInput = input.trim();
 
             if ("exit".equalsIgnoreCase(trimmedInput) || "quit".equalsIgnoreCase(trimmedInput)) {
-                System.out.println(GREEN + "Goodbye!" + RESET);
+                System.out.println(GREEN + "👋 Goodbye!" + RESET);
                 break;
             }
 
@@ -265,9 +271,19 @@ public class CodeReviewCli {
             }
 
             if ("status".equalsIgnoreCase(trimmedInput)) {
-                printStatus(workingDir);
+                printStatus(workingDir, properties.getDefaultModel());
                 continue;
             }
+
+            // 重置状态
+            isFirstChunk.set(true);
+            isThinking.set(false);
+            toolCallCount.set(0);
+            hasOutputHeader.set(false);
+
+            // 显示思考状态
+            System.out.print(YELLOW + "🤔 Thinking..." + RESET);
+            System.out.flush();
 
             try {
                 long startTime = System.currentTimeMillis();
@@ -289,7 +305,8 @@ public class CodeReviewCli {
 
             } catch (Exception e) {
                 metrics.recordError();
-                System.err.println(RED + "Error: " + e.getMessage() + RESET);
+                System.out.print("\r" + " ".repeat(50) + "\r");
+                System.err.println(RED + "❌ Error: " + e.getMessage() + RESET);
             }
         }
 
@@ -299,36 +316,12 @@ public class CodeReviewCli {
     /**
      * 处理流式响应
      */
-    private void processStreamResponse(ChatResponse response, StringBuilder fullResponse, boolean showThinking) {
+    private void processStreamResponse(ChatResponse response, StringBuilder fullResponse, boolean showHeader) {
         if (response.getResult() == null || response.getResult().getOutput() == null) {
             return;
         }
 
         var output = response.getResult().getOutput();
-
-        // 处理思考过程 (reasoning) - 如果模型支持
-        String reasoning = extractReasoning(output);
-        if (reasoning != null && !reasoning.isEmpty() && showThinking) {
-            // 首次显示思考过程标题
-            if (fullResponse.length() == 0) {
-                System.out.println(YELLOW + "💭 Thinking..." + RESET);
-                System.out.println(GRAY + "─".repeat(40) + RESET);
-            }
-            System.out.print(GRAY + reasoning + RESET);
-        }
-
-        // 处理文本内容
-        String text = output.getText();
-        if (text != null && !text.isEmpty()) {
-            // 如果之前有思考过程，现在开始输出正文
-            if (showThinking && fullResponse.length() == 0 && text.length() > 0) {
-                System.out.println();
-                System.out.println(GREEN + "📝 Review Result:" + RESET);
-                System.out.println(GRAY + "─".repeat(40) + RESET);
-            }
-            System.out.print(text);
-            fullResponse.append(text);
-        }
 
         // 处理工具调用
         var toolCalls = output.getToolCalls();
@@ -336,23 +329,38 @@ public class CodeReviewCli {
             for (var toolCall : toolCalls) {
                 String toolName = toolCall.name();
                 String toolArgs = formatToolArgs(toolCall.arguments());
-                System.out.println(BLUE + "🔧 " + toolName + RESET + GRAY + "(" + toolArgs + ")" + RESET);
-            }
-        }
-    }
 
-    /**
-     * 提取思考过程 (针对支持 reasoning 的模型)
-     */
-    private String extractReasoning(Object output) {
-        try {
-            // 尝试通过反射获取 reasoning 内容
-            var method = output.getClass().getMethod("getReasoningContent");
-            Object reasoning = method.invoke(output);
-            return reasoning != null ? reasoning.toString() : null;
-        } catch (Exception e) {
-            // 不支持 reasoning 的模型，返回 null
-            return null;
+                // 清除思考状态，显示工具调用
+                System.out.print("\r" + " ".repeat(50) + "\r");
+                System.out.print(BLUE + "🔧 " + RESET + toolName);
+                if (!toolArgs.isEmpty()) {
+                    System.out.print(GRAY + " (" + toolArgs + ")" + RESET);
+                }
+                System.out.println();
+
+                toolCallCount.incrementAndGet();
+                isFirstChunk.set(false);
+            }
+            return;
+        }
+
+        // 处理文本内容
+        String text = output.getText();
+        if (text != null && !text.isEmpty()) {
+            // 首次输出正文时，清除思考状态并显示标题
+            if (hasOutputHeader.compareAndSet(false, true)) {
+                System.out.print("\r" + " ".repeat(50) + "\r");
+                if (showHeader) {
+                    System.out.println(GREEN + BOLD + "📝 Review Result:" + RESET);
+                    System.out.println(GRAY + "─".repeat(50) + RESET);
+                } else {
+                    System.out.println();
+                }
+            }
+
+            System.out.print(text);
+            fullResponse.append(text);
+            isFirstChunk.set(false);
         }
     }
 
@@ -360,10 +368,65 @@ public class CodeReviewCli {
      * 格式化工具参数
      */
     private String formatToolArgs(String args) {
-        if (args == null || args.length() > 50) {
-            return "...";
+        if (args == null || args.isEmpty()) {
+            return "";
         }
-        return args.replace("\n", " ").replace("\"", "");
+        if (args.length() > 60) {
+            return args.substring(0, 57) + "...";
+        }
+        return args.replace("\n", " ").replaceAll("\\s+", " ");
+    }
+
+    /**
+     * 创建带反馈的工具
+     */
+    private List<ToolCallback> createToolsWithFeedback(CodeReviewProperties properties) {
+        GitOperations gitOps = new GitOperations(properties);
+        GhOperations ghOps = new GhOperations(properties);
+        CodeReviewTools fileTools = new CodeReviewTools(properties);
+
+        return List.of(
+            createToolCallback("gitCommand", "Execute Git commands to get code changes",
+                GitCommandRequest.class, req -> {
+                    printToolExecution("gitCommand", req.operation().name());
+                    return gitOps.execute(req.operation(), req.params());
+                }),
+            createToolCallback("ghCommand", "Execute GitHub CLI commands for PR information",
+                GhCommandRequest.class, req -> {
+                    printToolExecution("ghCommand", req.operation().name());
+                    return ghOps.execute(req.operation(), req.params());
+                }),
+            createToolCallback("readFile", "Read file content for context",
+                ReadFileRequest.class, req -> {
+                    printToolExecution("readFile", req.path());
+                    return fileTools.readFile(req.path());
+                }),
+            createToolCallback("writeFile", "Write review report to file",
+                WriteFileRequest.class, req -> {
+                    printToolExecution("writeFile", req.path());
+                    return fileTools.writeFile(req.path(), req.content());
+                })
+        );
+    }
+
+    /**
+     * 打印工具执行状态
+     */
+    private void printToolExecution(String toolName, String detail) {
+        System.out.print("\r" + " ".repeat(50) + "\r");
+        System.out.print(BLUE + "⏳ " + RESET + toolName + GRAY + " - " + detail + RESET);
+        System.out.flush();
+    }
+
+    /**
+     * 创建工具回调
+     */
+    private <T> ToolCallback createToolCallback(String name, String description,
+            Class<T> inputType, Function<T, String> function) {
+        return FunctionToolCallback.builder(name, function)
+            .description(description)
+            .inputType(inputType)
+            .build();
     }
 
     /**
@@ -371,12 +434,15 @@ public class CodeReviewCli {
      */
     private void printHelp() {
         System.out.println();
-        System.out.println(GREEN + "Available Commands:" + RESET);
-        System.out.println(GRAY + "  review current branch  - Review changes in current branch" + RESET);
-        System.out.println(GRAY + "  review uncommitted     - Review uncommitted changes" + RESET);
+        System.out.println(GREEN + BOLD + "Available Commands:" + RESET);
+        System.out.println();
+        System.out.println(GRAY + "  review current branch  - Review changes in current branch vs main" + RESET);
+        System.out.println(GRAY + "  review uncommitted     - Review uncommitted (staged + unstaged)" + RESET);
+        System.out.println(GRAY + "  review last commit     - Review the most recent commit" + RESET);
         System.out.println(GRAY + "  review commit <hash>   - Review specific commit" + RESET);
-        System.out.println(GRAY + "  review PR <number>     - Review pull request" + RESET);
-        System.out.println(GRAY + "  status                 - Show git status" + RESET);
+        System.out.println(GRAY + "  review PR <number>     - Review pull request (needs gh CLI)" + RESET);
+        System.out.println();
+        System.out.println(GRAY + "  status                 - Show repository status" + RESET);
         System.out.println(GRAY + "  help                   - Show this help" + RESET);
         System.out.println(GRAY + "  exit / quit            - Exit interactive mode" + RESET);
         System.out.println();
@@ -385,13 +451,14 @@ public class CodeReviewCli {
     /**
      * 打印状态
      */
-    private void printStatus(String workingDir) {
+    private void printStatus(String workingDir, String model) {
         System.out.println();
-        System.out.println(GREEN + "Repository Status:" + RESET);
-        System.out.println(GRAY + "  Directory: " + workingDir + RESET);
+        System.out.println(GREEN + BOLD + "📊 Repository Status:" + RESET);
+        System.out.println(GRAY + "  📁 Directory: " + workingDir + RESET);
+        System.out.println(GRAY + "  🤖 Model: " + model + RESET);
 
         boolean isGitRepo = Path.of(workingDir, ".git").toFile().exists();
-        System.out.println(GRAY + "  Git repo: " + (isGitRepo ? "Yes" : "No") + RESET);
+        System.out.println(GRAY + "  📦 Git repo: " + (isGitRepo ? "✅ Yes" : "❌ No") + RESET);
         System.out.println();
     }
 
@@ -431,41 +498,6 @@ public class CodeReviewCli {
             Provide structured feedback with severity levels (Critical/High/Medium/Low).
             """;
     }
-
-    /**
-     * 创建工具
-     */
-    private List<ToolCallback> createTools(CodeReviewProperties properties) {
-        GitOperations gitOps = new GitOperations(properties);
-        GhOperations ghOps = new GhOperations(properties);
-        CodeReviewTools fileTools = new CodeReviewTools(properties);
-
-        Function<GitCommandRequest, String> gitCommand = req -> gitOps.execute(req.operation(), req.params());
-        Function<GhCommandRequest, String> ghCommand = req -> ghOps.execute(req.operation(), req.params());
-        Function<ReadFileRequest, String> readFile = req -> fileTools.readFile(req.path());
-        Function<WriteFileRequest, String> writeFile = req -> fileTools.writeFile(req.path(), req.content());
-
-        return List.of(
-            FunctionToolCallback.builder("gitCommand", gitCommand)
-                .description("Execute Git commands to get code changes")
-                .inputType(GitCommandRequest.class)
-                .build(),
-            FunctionToolCallback.builder("ghCommand", ghCommand)
-                .description("Execute GitHub CLI commands for PR information")
-                .inputType(GhCommandRequest.class)
-                .build(),
-            FunctionToolCallback.builder("readFile", readFile)
-                .description("Read file content for context")
-                .inputType(ReadFileRequest.class)
-                .build(),
-            FunctionToolCallback.builder("writeFile", writeFile)
-                .description("Write review report to file")
-                .inputType(WriteFileRequest.class)
-                .build()
-        );
-    }
-
-    private static final String RED = "\u001B[31m";
 
     // Request records
     public record ReadFileRequest(String path) {}
