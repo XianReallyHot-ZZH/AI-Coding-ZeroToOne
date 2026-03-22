@@ -4,7 +4,17 @@
 
 ## 快速开始
 
-### 安装
+### 配置 API Key
+
+```bash
+# Linux/macOS
+export AI_API_KEY=your-api-key
+
+# Windows
+set AI_API_KEY=your-api-key
+```
+
+### 安装 (可选)
 
 **Linux/macOS:**
 ```bash
@@ -17,16 +27,6 @@ cd week08/codereview-agent-by-java
 cd week08\codereview-agent-by-java
 install.bat
 # 重启终端使 PATH 生效
-```
-
-### 配置 API Key
-
-```bash
-# Linux/macOS
-export AI_API_KEY=your-api-key
-
-# Windows
-set AI_API_KEY=your-api-key
 ```
 
 ## 使用方式
@@ -48,7 +48,7 @@ yy-codereview "review last commit"
 # 审查特定提交
 yy-codereview "review commit abc123"
 
-# 审查 PR
+# 审查 PR (需要安装 gh CLI)
 yy-codereview "review PR 12"
 ```
 
@@ -69,11 +69,13 @@ yy-codereview --interactive
 ```
 $ yy-codereview
 
-============================================================
-Code Review Agent - Interactive Mode
-Working directory: /path/to/your-project
-Type 'exit' or 'quit' to exit
-============================================================
+══════════════════════════════════════════════════
+  Code Review Agent - Interactive Mode
+══════════════════════════════════════════════════
+
+  Working directory: /path/to/your-project
+  Type 'exit' or 'quit' to exit
+  Type 'help' for available commands
 
 > review current branch
 (AI 输出审查结果...)
@@ -100,6 +102,20 @@ POST /api/v1/review/stream    # 流式审查 (SSE)
 GET  /api/v1/review/tools     # 工具列表
 ```
 
+## 命令行选项
+
+| 选项 | 说明 |
+|------|------|
+| `-i, --interactive` | 启动交互模式 |
+| `-v, --verbose` | 显示详细日志 (调试用) |
+| `--server` | 启动 Web API 服务 |
+| `-h, --help` | 显示帮助信息 |
+
+```bash
+# 显示详细日志 (调试用)
+yy-codereview -v "review current branch"
+```
+
 ## 模式对比
 
 | 模式 | 命令 | 用途 |
@@ -111,9 +127,11 @@ GET  /api/v1/review/tools     # 工具列表
 ## 示例输出
 
 ```
-============================================================
-Code Review Result
-============================================================
+Working directory: /path/to/your-project
+Review request: review current branch
+
+📝 Review Result:
+────────────────────────────────────────
 
 ## Summary
 本次审查涉及 3 个文件的改动，主要是在用户认证模块添加了双因素认证功能。
@@ -129,9 +147,8 @@ Code Review Result
 - 考虑添加单元测试
 - 密钥配置建议使用环境变量
 
-============================================================
+────────────────────────────────────────────────────────
 Completed in 12.3 seconds
-============================================================
 ```
 
 ## 支持的审查类型
